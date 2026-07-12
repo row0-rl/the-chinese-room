@@ -1,0 +1,490 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 70;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		A1B2C3D4E5F6000000000011 /* TheChineseRoomApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6000000000004 /* TheChineseRoomApp.swift */; };
+		A1B2C3D4E5F6000000000013 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6000000000006 /* Assets.xcassets */; };
+		A1B2C3D4E5F6000000000014 /* Preview Content in Resources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6000000000007 /* Preview Content */; };
+		D00000000000000000000001 /* AppView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C00000000000000000000001 /* AppView.swift */; };
+		D00000000000000000000002 /* AppConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = C00000000000000000000002 /* AppConfiguration.swift */; };
+		D00000000000000000000003 /* LearningMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = C00000000000000000000003 /* LearningMessage.swift */; };
+		D00000000000000000000004 /* MessageStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C00000000000000000000004 /* MessageStore.swift */; };
+		D00000000000000000000005 /* MessageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C00000000000000000000005 /* MessageService.swift */; };
+		D00000000000000000000006 /* MockMessageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C00000000000000000000006 /* MockMessageService.swift */; };
+		D00000000000000000000007 /* MessageGenerationPrompt.swift in Sources */ = {isa = PBXBuildFile; fileRef = C00000000000000000000007 /* MessageGenerationPrompt.swift */; };
+		D00000000000000000000008 /* OpenAIMessageTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = C00000000000000000000008 /* OpenAIMessageTypes.swift */; };
+		D00000000000000000000009 /* OpenAIMessageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C00000000000000000000009 /* OpenAIMessageService.swift */; };
+		D0000000000000000000000A /* SpeechService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000000A /* SpeechService.swift */; };
+		D0000000000000000000000B /* OpenAISpeechService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000000B /* OpenAISpeechService.swift */; };
+		D0000000000000000000000C /* JSONValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000000C /* JSONValue.swift */; };
+		D0000000000000000000000D /* Environment.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000000D /* Environment.swift */; };
+		D0000000000000000000000E /* MessageHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000000E /* MessageHomeView.swift */; };
+		D0000000000000000000000F /* MessageCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000000F /* MessageCard.swift */; };
+		D00000000000000000000010 /* ErrorBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = C00000000000000000000010 /* ErrorBanner.swift */; };
+		D00000000000000000000011 /* DictationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C00000000000000000000011 /* DictationService.swift */; };
+		D00000000000000000000012 /* OpenAIDictationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C00000000000000000000012 /* OpenAIDictationService.swift */; };
+		D00000000000000000000013 /* Haptics.swift in Sources */ = {isa = PBXBuildFile; fileRef = C00000000000000000000013 /* Haptics.swift */; };
+		D00000000000000000000014 /* MessageQueueActor.swift in Sources */ = {isa = PBXBuildFile; fileRef = C00000000000000000000014 /* MessageQueueActor.swift */; };
+		D00000000000000000000015 /* MessageSessionRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = C00000000000000000000015 /* MessageSessionRecord.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		A1B2C3D4E5F6000000000002 /* TheChineseRoom.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TheChineseRoom.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A1B2C3D4E5F6000000000004 /* TheChineseRoomApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TheChineseRoomApp.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F6000000000006 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		A1B2C3D4E5F6000000000007 /* Preview Content */ = {isa = PBXFileReference; lastKnownFileType = folder; path = "Preview Content"; sourceTree = "<group>"; };
+		C00000000000000000000001 /* AppView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppView.swift; sourceTree = "<group>"; };
+		C00000000000000000000002 /* AppConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfiguration.swift; sourceTree = "<group>"; };
+		C00000000000000000000003 /* LearningMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LearningMessage.swift; sourceTree = "<group>"; };
+		C00000000000000000000004 /* MessageStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageStore.swift; sourceTree = "<group>"; };
+		C00000000000000000000005 /* MessageService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageService.swift; sourceTree = "<group>"; };
+		C00000000000000000000006 /* MockMessageService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockMessageService.swift; sourceTree = "<group>"; };
+		C00000000000000000000007 /* MessageGenerationPrompt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageGenerationPrompt.swift; sourceTree = "<group>"; };
+		C00000000000000000000008 /* OpenAIMessageTypes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenAIMessageTypes.swift; sourceTree = "<group>"; };
+		C00000000000000000000009 /* OpenAIMessageService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenAIMessageService.swift; sourceTree = "<group>"; };
+		C0000000000000000000000A /* SpeechService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechService.swift; sourceTree = "<group>"; };
+		C0000000000000000000000B /* OpenAISpeechService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenAISpeechService.swift; sourceTree = "<group>"; };
+		C0000000000000000000000C /* JSONValue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JSONValue.swift; sourceTree = "<group>"; };
+		C0000000000000000000000D /* Environment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Environment.swift; sourceTree = "<group>"; };
+		C0000000000000000000000E /* MessageHomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageHomeView.swift; sourceTree = "<group>"; };
+		C0000000000000000000000F /* MessageCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageCard.swift; sourceTree = "<group>"; };
+		C00000000000000000000010 /* ErrorBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ErrorBanner.swift; sourceTree = "<group>"; };
+		C00000000000000000000011 /* DictationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictationService.swift; sourceTree = "<group>"; };
+		C00000000000000000000012 /* OpenAIDictationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenAIDictationService.swift; sourceTree = "<group>"; };
+		C00000000000000000000013 /* Haptics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Haptics.swift; sourceTree = "<group>"; };
+		C00000000000000000000014 /* MessageQueueActor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageQueueActor.swift; sourceTree = "<group>"; };
+		C00000000000000000000015 /* MessageSessionRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageSessionRecord.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		A1B2C3D4E5F6000000000021 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		A1B2C3D4E5F6000000000003 /* TheChineseRoom */ = {
+			isa = PBXGroup;
+			children = (
+				C00000000000000000000101 /* App */,
+				C00000000000000000000102 /* Models */,
+				C00000000000000000000103 /* Stores */,
+				C00000000000000000000104 /* Services */,
+				C00000000000000000000107 /* Support */,
+				C00000000000000000000108 /* Views */,
+				A1B2C3D4E5F6000000000004 /* TheChineseRoomApp.swift */,
+				A1B2C3D4E5F6000000000006 /* Assets.xcassets */,
+				A1B2C3D4E5F6000000000007 /* Preview Content */,
+			);
+			path = TheChineseRoom;
+			sourceTree = "<group>";
+		};
+		C00000000000000000000101 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				C00000000000000000000001 /* AppView.swift */,
+				C00000000000000000000002 /* AppConfiguration.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		C00000000000000000000102 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				C00000000000000000000003 /* LearningMessage.swift */,
+				C00000000000000000000015 /* MessageSessionRecord.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		C00000000000000000000103 /* Stores */ = {
+			isa = PBXGroup;
+			children = (
+				C00000000000000000000004 /* MessageStore.swift */,
+				C00000000000000000000014 /* MessageQueueActor.swift */,
+			);
+			path = Stores;
+			sourceTree = "<group>";
+		};
+		C00000000000000000000104 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				C00000000000000000000105 /* Messages */,
+				C00000000000000000000106 /* Speech */,
+				C00000000000000000000109 /* Dictation */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		C00000000000000000000105 /* Messages */ = {
+			isa = PBXGroup;
+			children = (
+				C00000000000000000000005 /* MessageService.swift */,
+				C00000000000000000000006 /* MockMessageService.swift */,
+				C00000000000000000000007 /* MessageGenerationPrompt.swift */,
+				C00000000000000000000008 /* OpenAIMessageTypes.swift */,
+				C00000000000000000000009 /* OpenAIMessageService.swift */,
+			);
+			path = Messages;
+			sourceTree = "<group>";
+		};
+		C00000000000000000000106 /* Speech */ = {
+			isa = PBXGroup;
+			children = (
+				C0000000000000000000000A /* SpeechService.swift */,
+				C0000000000000000000000B /* OpenAISpeechService.swift */,
+			);
+			path = Speech;
+			sourceTree = "<group>";
+		};
+		C00000000000000000000109 /* Dictation */ = {
+			isa = PBXGroup;
+			children = (
+				C00000000000000000000011 /* DictationService.swift */,
+				C00000000000000000000012 /* OpenAIDictationService.swift */,
+			);
+			path = Dictation;
+			sourceTree = "<group>";
+		};
+		C00000000000000000000107 /* Support */ = {
+			isa = PBXGroup;
+			children = (
+				C0000000000000000000000C /* JSONValue.swift */,
+				C0000000000000000000000D /* Environment.swift */,
+				C00000000000000000000013 /* Haptics.swift */,
+			);
+			path = Support;
+			sourceTree = "<group>";
+		};
+		C00000000000000000000108 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				C0000000000000000000000E /* MessageHomeView.swift */,
+				C0000000000000000000000F /* MessageCard.swift */,
+				C00000000000000000000010 /* ErrorBanner.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		A1B2C3D4E5F6000000000008 = {
+			isa = PBXGroup;
+			children = (
+				A1B2C3D4E5F6000000000003 /* TheChineseRoom */,
+				A1B2C3D4E5F6000000000009 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		A1B2C3D4E5F6000000000009 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A1B2C3D4E5F6000000000002 /* TheChineseRoom.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		A1B2C3D4E5F6000000000001 /* TheChineseRoom */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A1B2C3D4E5F6000000000040 /* Build configuration list for PBXNativeTarget "TheChineseRoom" */;
+			buildPhases = (
+				A1B2C3D4E5F6000000000020 /* Sources */,
+				A1B2C3D4E5F6000000000021 /* Frameworks */,
+				A1B2C3D4E5F6000000000022 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = TheChineseRoom;
+			productName = TheChineseRoom;
+			productReference = A1B2C3D4E5F6000000000002 /* TheChineseRoom.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		A1B2C3D4E5F6000000000000 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1600;
+				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+					A1B2C3D4E5F6000000000001 = {
+						CreatedOnToolsVersion = 16.0;
+					};
+				};
+			};
+			buildConfigurationList = A1B2C3D4E5F6000000000030 /* Build configuration list for PBXProject "TheChineseRoom" */;
+			compatibilityVersion = "Xcode 16.0.Superseded.1";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = A1B2C3D4E5F6000000000008;
+			minimizedProjectReferenceProxies = 1;
+			productRefGroup = A1B2C3D4E5F6000000000009 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				A1B2C3D4E5F6000000000001 /* TheChineseRoom */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		A1B2C3D4E5F6000000000022 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A1B2C3D4E5F6000000000013 /* Assets.xcassets in Resources */,
+				A1B2C3D4E5F6000000000014 /* Preview Content in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		A1B2C3D4E5F6000000000020 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D00000000000000000000002 /* AppConfiguration.swift in Sources */,
+				D00000000000000000000003 /* LearningMessage.swift in Sources */,
+				D00000000000000000000004 /* MessageStore.swift in Sources */,
+				D00000000000000000000005 /* MessageService.swift in Sources */,
+				D00000000000000000000006 /* MockMessageService.swift in Sources */,
+				D00000000000000000000007 /* MessageGenerationPrompt.swift in Sources */,
+				D00000000000000000000008 /* OpenAIMessageTypes.swift in Sources */,
+				D00000000000000000000009 /* OpenAIMessageService.swift in Sources */,
+				D0000000000000000000000A /* SpeechService.swift in Sources */,
+				D0000000000000000000000B /* OpenAISpeechService.swift in Sources */,
+				D0000000000000000000000C /* JSONValue.swift in Sources */,
+				D0000000000000000000000D /* Environment.swift in Sources */,
+				D0000000000000000000000E /* MessageHomeView.swift in Sources */,
+				D0000000000000000000000F /* MessageCard.swift in Sources */,
+				D00000000000000000000010 /* ErrorBanner.swift in Sources */,
+				D00000000000000000000011 /* DictationService.swift in Sources */,
+				D00000000000000000000012 /* OpenAIDictationService.swift in Sources */,
+				D00000000000000000000013 /* Haptics.swift in Sources */,
+				D00000000000000000000014 /* MessageQueueActor.swift in Sources */,
+				D00000000000000000000015 /* MessageSessionRecord.swift in Sources */,
+				D00000000000000000000001 /* AppView.swift in Sources */,
+				A1B2C3D4E5F6000000000011 /* TheChineseRoomApp.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		A1B2C3D4E5F6000000000031 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		A1B2C3D4E5F6000000000032 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		A1B2C3D4E5F6000000000041 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "\"TheChineseRoom/Preview Content\"";
+				DEVELOPMENT_TEAM = 974XCSH6VY;
+				ENABLE_PREVIEWS = YES;
+					GENERATE_INFOPLIST_FILE = NO;
+					INFOPLIST_FILE = TheChineseRoom/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.TheChineseRoom;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		A1B2C3D4E5F6000000000042 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "\"TheChineseRoom/Preview Content\"";
+				DEVELOPMENT_TEAM = 974XCSH6VY;
+				ENABLE_PREVIEWS = YES;
+					GENERATE_INFOPLIST_FILE = NO;
+					INFOPLIST_FILE = TheChineseRoom/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.TheChineseRoom;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		A1B2C3D4E5F6000000000030 /* Build configuration list for PBXProject "TheChineseRoom" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A1B2C3D4E5F6000000000031 /* Debug */,
+				A1B2C3D4E5F6000000000032 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A1B2C3D4E5F6000000000040 /* Build configuration list for PBXNativeTarget "TheChineseRoom" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A1B2C3D4E5F6000000000041 /* Debug */,
+				A1B2C3D4E5F6000000000042 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = A1B2C3D4E5F6000000000000 /* Project object */;
+}
