@@ -14,7 +14,6 @@ ATTACH_CONSOLE="${ATTACH_CONSOLE:-1}"
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PROJECT_PATH="$ROOT_DIR/$PROJECT"
 DERIVED_DATA_ABS="$ROOT_DIR/$DERIVED_DATA_PATH"
-ENV_FILE="$ROOT_DIR/.env"
 
 usage() {
   cat <<EOF
@@ -98,13 +97,6 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if [[ -f "$ENV_FILE" ]]; then
-  set -a
-  # shellcheck source=/dev/null
-  source "$ENV_FILE"
-  set +a
-fi
-
 if [[ ! -d "$PROJECT_PATH" ]]; then
   echo "Project not found: $PROJECT_PATH" >&2
   exit 1
@@ -135,26 +127,12 @@ echo "Scheme: $SCHEME"
 echo "Configuration: $CONFIGURATION"
 echo "Destination: $DESTINATION"
 
-BUILD_CONFIG_DIR="$DERIVED_DATA_ABS/BuildConfiguration"
-BUILD_CONFIG_FILE="$BUILD_CONFIG_DIR/OpenAI.generated.xcconfig"
-mkdir -p "$BUILD_CONFIG_DIR"
-chmod 700 "$BUILD_CONFIG_DIR"
-{
-  printf 'OPENAI_API_KEY = %s\n' "${OPENAI_API_KEY:-}"
-  printf 'OPENAI_MODEL = %s\n' "${OPENAI_MODEL:-}"
-  printf 'OPENAI_TTS_MODEL = %s\n' "${OPENAI_TTS_MODEL:-}"
-  printf 'OPENAI_TTS_VOICE = %s\n' "${OPENAI_TTS_VOICE:-}"
-  printf 'OPENAI_TRANSCRIPTION_MODEL = %s\n' "${OPENAI_TRANSCRIPTION_MODEL:-}"
-} > "$BUILD_CONFIG_FILE"
-chmod 600 "$BUILD_CONFIG_FILE"
-
 xcodebuild \
   -project "$PROJECT_PATH" \
   -scheme "$SCHEME" \
   -configuration "$CONFIGURATION" \
   -destination "$DESTINATION" \
   -derivedDataPath "$DERIVED_DATA_ABS" \
-  -xcconfig "$BUILD_CONFIG_FILE" \
   build
 
 APP_PATH="$DERIVED_DATA_ABS/Build/Products/$CONFIGURATION-$PRODUCT_PLATFORM/$SCHEME.app"

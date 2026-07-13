@@ -4,7 +4,7 @@ import Foundation
 protocol DictationService {
     var onTranscriptChange: ((String) -> Void)? { get set }
 
-    func startRecording() async throws
+    func startRecording(localeIdentifier: String) async throws
     func finishRecording() async throws -> String
     func cancelRecording()
 }
@@ -12,7 +12,7 @@ protocol DictationService {
 struct UnavailableDictationService: DictationService {
     var onTranscriptChange: ((String) -> Void)?
 
-    func startRecording() async throws {
+    func startRecording(localeIdentifier: String) async throws {
         throw DictationServiceError.notConfigured
     }
 
@@ -30,7 +30,7 @@ enum DictationServiceError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .notConfigured:
-            "OpenAI dictation is not configured."
+            "On-device dictation is unavailable."
         }
     }
 }

@@ -17,17 +17,15 @@
 		D00000000000000000000005 /* MessageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C00000000000000000000005 /* MessageService.swift */; };
 		D00000000000000000000006 /* MockMessageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C00000000000000000000006 /* MockMessageService.swift */; };
 		D00000000000000000000007 /* MessageGenerationPrompt.swift in Sources */ = {isa = PBXBuildFile; fileRef = C00000000000000000000007 /* MessageGenerationPrompt.swift */; };
-		D00000000000000000000008 /* OpenAIMessageTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = C00000000000000000000008 /* OpenAIMessageTypes.swift */; };
-		D00000000000000000000009 /* OpenAIMessageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C00000000000000000000009 /* OpenAIMessageService.swift */; };
+		D00000000000000000000009 /* FoundationModelsMessageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C00000000000000000000009 /* FoundationModelsMessageService.swift */; };
 		D0000000000000000000000A /* SpeechService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000000A /* SpeechService.swift */; };
-		D0000000000000000000000B /* OpenAISpeechService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000000B /* OpenAISpeechService.swift */; };
-		D0000000000000000000000C /* JSONValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000000C /* JSONValue.swift */; };
+		D0000000000000000000000B /* SystemSpeechService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000000B /* SystemSpeechService.swift */; };
 		D0000000000000000000000D /* Environment.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000000D /* Environment.swift */; };
 		D0000000000000000000000E /* MessageHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000000E /* MessageHomeView.swift */; };
 		D0000000000000000000000F /* MessageCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000000F /* MessageCard.swift */; };
 		D00000000000000000000010 /* ErrorBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = C00000000000000000000010 /* ErrorBanner.swift */; };
 		D00000000000000000000011 /* DictationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C00000000000000000000011 /* DictationService.swift */; };
-		D00000000000000000000012 /* OpenAIDictationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C00000000000000000000012 /* OpenAIDictationService.swift */; };
+		D00000000000000000000012 /* SystemDictationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C00000000000000000000012 /* SystemDictationService.swift */; };
 		D00000000000000000000013 /* Haptics.swift in Sources */ = {isa = PBXBuildFile; fileRef = C00000000000000000000013 /* Haptics.swift */; };
 		D00000000000000000000014 /* MessageQueueActor.swift in Sources */ = {isa = PBXBuildFile; fileRef = C00000000000000000000014 /* MessageQueueActor.swift */; };
 		D00000000000000000000015 /* MessageSessionRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = C00000000000000000000015 /* MessageSessionRecord.swift */; };
@@ -45,17 +43,15 @@
 		C00000000000000000000005 /* MessageService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageService.swift; sourceTree = "<group>"; };
 		C00000000000000000000006 /* MockMessageService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockMessageService.swift; sourceTree = "<group>"; };
 		C00000000000000000000007 /* MessageGenerationPrompt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageGenerationPrompt.swift; sourceTree = "<group>"; };
-		C00000000000000000000008 /* OpenAIMessageTypes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenAIMessageTypes.swift; sourceTree = "<group>"; };
-		C00000000000000000000009 /* OpenAIMessageService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenAIMessageService.swift; sourceTree = "<group>"; };
+		C00000000000000000000009 /* FoundationModelsMessageService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoundationModelsMessageService.swift; sourceTree = "<group>"; };
 		C0000000000000000000000A /* SpeechService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechService.swift; sourceTree = "<group>"; };
-		C0000000000000000000000B /* OpenAISpeechService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenAISpeechService.swift; sourceTree = "<group>"; };
-		C0000000000000000000000C /* JSONValue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JSONValue.swift; sourceTree = "<group>"; };
+		C0000000000000000000000B /* SystemSpeechService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemSpeechService.swift; sourceTree = "<group>"; };
 		C0000000000000000000000D /* Environment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Environment.swift; sourceTree = "<group>"; };
 		C0000000000000000000000E /* MessageHomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageHomeView.swift; sourceTree = "<group>"; };
 		C0000000000000000000000F /* MessageCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageCard.swift; sourceTree = "<group>"; };
 		C00000000000000000000010 /* ErrorBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ErrorBanner.swift; sourceTree = "<group>"; };
 		C00000000000000000000011 /* DictationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictationService.swift; sourceTree = "<group>"; };
-		C00000000000000000000012 /* OpenAIDictationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenAIDictationService.swift; sourceTree = "<group>"; };
+		C00000000000000000000012 /* SystemDictationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemDictationService.swift; sourceTree = "<group>"; };
 		C00000000000000000000013 /* Haptics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Haptics.swift; sourceTree = "<group>"; };
 		C00000000000000000000014 /* MessageQueueActor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageQueueActor.swift; sourceTree = "<group>"; };
 		C00000000000000000000015 /* MessageSessionRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageSessionRecord.swift; sourceTree = "<group>"; };
@@ -131,8 +127,7 @@
 				C00000000000000000000005 /* MessageService.swift */,
 				C00000000000000000000006 /* MockMessageService.swift */,
 				C00000000000000000000007 /* MessageGenerationPrompt.swift */,
-				C00000000000000000000008 /* OpenAIMessageTypes.swift */,
-				C00000000000000000000009 /* OpenAIMessageService.swift */,
+				C00000000000000000000009 /* FoundationModelsMessageService.swift */,
 			);
 			path = Messages;
 			sourceTree = "<group>";
@@ -141,7 +136,7 @@
 			isa = PBXGroup;
 			children = (
 				C0000000000000000000000A /* SpeechService.swift */,
-				C0000000000000000000000B /* OpenAISpeechService.swift */,
+				C0000000000000000000000B /* SystemSpeechService.swift */,
 			);
 			path = Speech;
 			sourceTree = "<group>";
@@ -150,7 +145,7 @@
 			isa = PBXGroup;
 			children = (
 				C00000000000000000000011 /* DictationService.swift */,
-				C00000000000000000000012 /* OpenAIDictationService.swift */,
+				C00000000000000000000012 /* SystemDictationService.swift */,
 			);
 			path = Dictation;
 			sourceTree = "<group>";
@@ -158,7 +153,6 @@
 		C00000000000000000000107 /* Support */ = {
 			isa = PBXGroup;
 			children = (
-				C0000000000000000000000C /* JSONValue.swift */,
 				C0000000000000000000000D /* Environment.swift */,
 				C00000000000000000000013 /* Haptics.swift */,
 			);
@@ -268,17 +262,15 @@
 				D00000000000000000000005 /* MessageService.swift in Sources */,
 				D00000000000000000000006 /* MockMessageService.swift in Sources */,
 				D00000000000000000000007 /* MessageGenerationPrompt.swift in Sources */,
-				D00000000000000000000008 /* OpenAIMessageTypes.swift in Sources */,
-				D00000000000000000000009 /* OpenAIMessageService.swift in Sources */,
+				D00000000000000000000009 /* FoundationModelsMessageService.swift in Sources */,
 				D0000000000000000000000A /* SpeechService.swift in Sources */,
-				D0000000000000000000000B /* OpenAISpeechService.swift in Sources */,
-				D0000000000000000000000C /* JSONValue.swift in Sources */,
+				D0000000000000000000000B /* SystemSpeechService.swift in Sources */,
 				D0000000000000000000000D /* Environment.swift in Sources */,
 				D0000000000000000000000E /* MessageHomeView.swift in Sources */,
 				D0000000000000000000000F /* MessageCard.swift in Sources */,
 				D00000000000000000000010 /* ErrorBanner.swift in Sources */,
 				D00000000000000000000011 /* DictationService.swift in Sources */,
-				D00000000000000000000012 /* OpenAIDictationService.swift in Sources */,
+				D00000000000000000000012 /* SystemDictationService.swift in Sources */,
 				D00000000000000000000013 /* Haptics.swift in Sources */,
 				D00000000000000000000014 /* MessageQueueActor.swift in Sources */,
 				D00000000000000000000015 /* MessageSessionRecord.swift in Sources */,
@@ -342,7 +334,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
@@ -399,7 +391,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;

@@ -6,9 +6,9 @@ The Chinese Room is an AI language learning iOS app. It allows users to learn an
 
 - SwiftUI
 - SwiftData
-- OpenAI models
-  - gpt-5.4-mini
-  - gpt-realtime-whisper for dictation
+- Apple Foundation Models for on-device message generation
+- Apple Speech for on-device dictation
+- AVSpeechSynthesizer for system text-to-speech
 
 ## Features
 
@@ -34,9 +34,9 @@ On the bottom of the page is an input area with a hold-to-speak dictation button
 
 Input text should be normalized. For example, "Me be hungry" likely means "I am hungry".
 
-## Authentication
+## Device Requirements
 
-OpenAI Key should be embedded in the building/deployment environment.
+Message generation requires iOS 26 and an Apple Intelligence-capable iPhone with Apple Intelligence enabled.
 
 ## Design
 

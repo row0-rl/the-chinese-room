@@ -20,12 +20,6 @@ struct MessageHomeView: View {
                 let cardViewportHeight = cardViewportHeight(in: proxy.size.height)
 
                 VStack(spacing: 0) {
-                    if let errorMessage = store.errorMessage {
-                        ErrorBanner(message: errorMessage)
-                            .padding(.horizontal, 20)
-                            .padding(.bottom, 12)
-                    }
-
                     cardStack(height: cardViewportHeight)
                         .padding(.horizontal, 20)
 

@@ -11,97 +11,6 @@ struct MessageGenerationPrompt {
     When examples are present, they must be natural, short, distinct from each other, useful in daily life, and must not simply repeat the main expression.
     """
 
-    static func translationResponseFormat(languageMode: LanguageMode) -> OpenAITextFormat {
-        let sourceName = languageMode.source.promptName
-        let targetName = languageMode.target.promptName
-        let sourceKey = languageMode.source.schemaKey
-        let targetKey = languageMode.target.schemaKey
-        let schema: [String: JSONValue] = [
-            "type": "object",
-            "additionalProperties": false,
-            "properties": [
-                sourceKey: [
-                    "type": "string",
-                    "description": .string("A corrected, natural \(sourceName) expression.")
-                ],
-                targetKey: [
-                    "type": "string",
-                    "description": .string("A natural \(targetName) translation of \(sourceKey).")
-                ],
-                "examples": [
-                    "type": ["array", "null"],
-                    "description": "Two distinct usage examples when useful, or null when the main expression is already a complete sentence and examples would mostly repeat it.",
-                    "minItems": 2,
-                    "maxItems": 2,
-                    "items": [
-                        "type": "object",
-                        "additionalProperties": false,
-                        "properties": [
-                            sourceKey: [
-                                "type": "string",
-                                "description": .string("A natural \(sourceName) example sentence.")
-                            ],
-                            targetKey: [
-                                "type": "string",
-                                "description": .string("A natural \(targetName) translation of \(sourceKey).")
-                            ]
-                        ],
-                        "required": .array([.string(sourceKey), .string(targetKey)])
-                    ]
-                ]
-            ],
-            "required": .array([.string(sourceKey), .string(targetKey), .string("examples")])
-        ]
-
-        return OpenAITextFormat(
-            type: "json_schema",
-            name: "learning_message_translation",
-            strict: true,
-            schema: schema
-        )
-    }
-
-    static func alignmentResponseFormat(languageMode: LanguageMode) -> OpenAITextFormat {
-        let sourceName = languageMode.source.promptName
-        let targetName = languageMode.target.promptName
-        let sourceKey = languageMode.source.schemaKey
-        let targetKey = languageMode.target.schemaKey
-        let schema: [String: JSONValue] = [
-            "type": "object",
-            "additionalProperties": false,
-            "properties": [
-                "literalChunks": [
-                    "type": "array",
-                    "description": .string("Ordered \(targetName) chunks from the provided complete \(targetKey), with a corresponding word-by-word \(sourceName) translation for each chunk."),
-                    "minItems": 1,
-                    "items": [
-                        "type": "object",
-                        "additionalProperties": false,
-                        "properties": [
-                            targetKey: [
-                                "type": "string",
-                                "description": .string("An exact \(targetName) chunk copied from the provided complete \(targetKey), preserving order and punctuation.")
-                            ],
-                            sourceKey: [
-                                "type": "string",
-                                "description": .string("The \(sourceName) word-by-word translation corresponding to this \(targetKey) chunk.")
-                            ]
-                        ],
-                        "required": .array([.string(targetKey), .string(sourceKey)])
-                    ]
-                ]
-            ],
-            "required": .array([.string("literalChunks")])
-        ]
-
-        return OpenAITextFormat(
-            type: "json_schema",
-            name: "learning_message_alignment",
-            strict: true,
-            schema: schema
-        )
-    }
-
     static func userPrompt(
         mode: MessageGenerationMode,
         userInput: String?,
@@ -143,7 +52,7 @@ struct MessageGenerationPrompt {
     }
 
     static func alignmentPrompt(
-        translation: TranslationPayload,
+        targetText: String,
         languageMode: LanguageMode,
         validationError: String? = nil
     ) -> String {
@@ -160,7 +69,7 @@ struct MessageGenerationPrompt {
         - chunks are small enough to help a learner see how the expression is built
         - grammar particles, endings, auxiliaries, or fixed expressions stay attached only when separating them would make the counterpart confusing
         The chunks together must cover the full \(languageMode.target.promptName) expression in order.
-        \(languageMode.target.promptName): \(translation.targetText)
+        \(languageMode.target.promptName): \(targetText)
         \(validationInstruction)
         """
     }

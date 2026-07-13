@@ -1,8 +1,8 @@
 @MainActor
 protocol SpeechService: AnyObject {
     var isSpeechAudioEnabled: Bool { get }
-    func prepareSpeechAudio(_ text: String) async throws
-    func speak(_ text: String) async throws
+    func prepareSpeechAudio(_ text: String, localeIdentifier: String) async throws
+    func speak(_ text: String, localeIdentifier: String) async throws
 }
 
 @MainActor
@@ -11,9 +11,9 @@ final class SilentSpeechService: SpeechService {
         false
     }
 
-    func prepareSpeechAudio(_ text: String) async throws {
+    func prepareSpeechAudio(_ text: String, localeIdentifier: String) async throws {
     }
 
-    func speak(_ text: String) async throws {
+    func speak(_ text: String, localeIdentifier: String) async throws {
     }
 }

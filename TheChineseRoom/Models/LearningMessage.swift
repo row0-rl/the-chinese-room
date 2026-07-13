@@ -55,6 +55,7 @@ struct LanguageProfile: Identifiable, Codable, Equatable, Hashable {
     let displayName: String
     let nativeName: String
     let promptName: String
+    let localeIdentifier: String
 
     var schemaKey: String {
         let words = displayName
@@ -102,28 +103,32 @@ enum LanguageCatalog {
         id: "english_us",
         displayName: "English",
         nativeName: "English",
-        promptName: "US English"
+        promptName: "US English",
+        localeIdentifier: "en-US"
     )
 
     static let frenchFrance = LanguageProfile(
         id: "french_france",
         displayName: "French",
         nativeName: "Français",
-        promptName: "French as used in France"
+        promptName: "French as used in France",
+        localeIdentifier: "fr-FR"
     )
 
     static let simplifiedChinese = LanguageProfile(
         id: "simplified_chinese",
         displayName: "Chinese",
         nativeName: "简体中文",
-        promptName: "Simplified Chinese"
+        promptName: "Simplified Chinese",
+        localeIdentifier: "zh-Hans-CN"
     )
 
     static let koreanHangul = LanguageProfile(
         id: "korean_hangul",
         displayName: "Korean",
         nativeName: "한국어",
-        promptName: "Korean Hangul"
+        promptName: "Korean Hangul",
+        localeIdentifier: "ko-KR"
     )
 
     static let supportedLanguages = [

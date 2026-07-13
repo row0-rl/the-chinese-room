@@ -1,4 +1,5 @@
 import Foundation
+import FoundationModels
 import SwiftData
 
 @MainActor
@@ -8,6 +9,7 @@ final class MessageStore {
     private let messageQueue: MessageQueueActor
     private let speechService: SpeechService
     private var dictationService: DictationService
+    private let languageModel: SystemLanguageModel?
     let usesLocalMessages: Bool
     private(set) var messages: [LearningMessage]
     private(set) var currentIndex: Int
@@ -18,7 +20,6 @@ final class MessageStore {
     private(set) var isPreparingNextRandom = false
     private(set) var isShowingBlankCard = false
     private(set) var dictatedText = ""
-    private(set) var errorMessage: String?
     private(set) var currentLanguageMode: LanguageMode
     private var modelContext: ModelContext?
     private var hasLoadedPersistedSession = false
@@ -50,6 +51,12 @@ final class MessageStore {
         currentIndex > 0
     }
 
+    var modelAvailabilityMessage: String? {
+        guard let languageModel else { return nil }
+        guard case .unavailable = languageModel.availability else { return nil }
+        return FoundationModelsServiceError.unavailable(languageModel.availability).localizedDescription
+    }
+
     var nextRandomPreviewText: String? {
         if currentIndex < messages.count - 1 {
             return messages[currentIndex + 1].normalizedSourceText
@@ -60,40 +67,13 @@ final class MessageStore {
     }
 
     init(configuration: AppConfiguration, initialLanguageMode: LanguageMode = LanguageMode.defaultMode) {
-        if let openAIConfiguration = configuration.openAIConfiguration {
-            if let speechConfiguration = configuration.speechConfiguration {
-                self.speechService = OpenAISpeechService(configuration: speechConfiguration)
-            } else {
-                self.speechService = SilentSpeechService()
-            }
-            let messageService = OpenAIMessageService(configuration: openAIConfiguration) { [speechService] targetText in
-                do {
-                    try await speechService.prepareSpeechAudio(targetText)
-                } catch {
-                    #if DEBUG
-                    print("Speech prefetch after translation failed: \(error.localizedDescription)")
-                    #endif
-                }
-            }
-            self.service = messageService
-            self.messageQueue = MessageQueueActor(service: messageService)
-
-            var dictationService: DictationService
-            if let dictationConfiguration = configuration.dictationConfiguration {
-                dictationService = OpenAIDictationService(configuration: dictationConfiguration)
-            } else {
-                dictationService = UnavailableDictationService()
-            }
-            self.dictationService = dictationService
-            self.usesLocalMessages = false
-        } else {
-            let messageService = MockMessageService()
-            self.service = messageService
-            self.messageQueue = MessageQueueActor(service: messageService)
-            self.speechService = SilentSpeechService()
-            self.dictationService = UnavailableDictationService()
-            self.usesLocalMessages = true
-        }
+        let messageService = FoundationModelsMessageService(model: configuration.languageModel)
+        self.service = messageService
+        self.messageQueue = MessageQueueActor(service: messageService)
+        self.speechService = SystemSpeechService()
+        self.dictationService = SystemDictationService()
+        self.languageModel = configuration.languageModel
+        self.usesLocalMessages = false
         self.currentLanguageMode = initialLanguageMode
         self.messages = [MockMessageService.openingMessage]
         self.currentIndex = 0
@@ -111,6 +91,7 @@ final class MessageStore {
         self.messageQueue = MessageQueueActor(service: service)
         self.speechService = speechService ?? SilentSpeechService()
         self.dictationService = dictationService ?? UnavailableDictationService()
+        self.languageModel = nil
         self.usesLocalMessages = usesLocalMessages
         self.currentLanguageMode = initialLanguageMode
         self.messages = [MockMessageService.openingMessage]
@@ -135,7 +116,6 @@ final class MessageStore {
         guard !isGenerating else { return }
 
         if currentIndex < messages.count - 1 {
-            errorMessage = nil
             isShowingBlankCard = false
             currentIndex += 1
             saveCurrentSession()
@@ -151,7 +131,6 @@ final class MessageStore {
         defer { isGenerating = false }
 
         do {
-            errorMessage = nil
             let nextMessage = try await messageQueue.consumeNext(
                 after: sourceMessage,
                 languageMode: requestedLanguageMode,
@@ -169,7 +148,7 @@ final class MessageStore {
             scheduleAutoSpeakCurrentMessage()
         } catch {
             isShowingBlankCard = false
-            errorMessage = error.localizedDescription
+            logError(error, context: "Generating next random message")
         }
         Task { await prepareNextRandomMessage() }
     }
@@ -196,7 +175,6 @@ final class MessageStore {
         currentLanguageMode = newLanguageMode
         LanguageModeStorage.save(newLanguageMode)
         loadCurrentSession()
-        errorMessage = nil
         dictatedText = ""
         isShowingBlankCard = false
         clearPreparedNextRandomMessage()
@@ -209,7 +187,6 @@ final class MessageStore {
 
     func previousMessage() {
         guard canGoBack else { return }
-        errorMessage = nil
         isShowingBlankCard = false
         currentIndex -= 1
         saveCurrentSession()
@@ -218,7 +195,6 @@ final class MessageStore {
     }
 
     func commitNextVisibleMessage() {
-        errorMessage = nil
         isShowingBlankCard = false
 
         if currentIndex < messages.count - 1 {
@@ -241,7 +217,6 @@ final class MessageStore {
 
     func showBlankNextMessage() {
         guard currentIndex == messages.count - 1, !isGenerating else { return }
-        errorMessage = nil
         isShowingBlankCard = true
     }
 
@@ -254,7 +229,6 @@ final class MessageStore {
         defer { isGenerating = false }
 
         do {
-            errorMessage = nil
             let nextMessage = try await messageQueue.consumeNext(
                 after: sourceMessage,
                 languageMode: requestedLanguageMode,
@@ -272,7 +246,7 @@ final class MessageStore {
             scheduleAutoSpeakCurrentMessage()
         } catch {
             isShowingBlankCard = false
-            errorMessage = error.localizedDescription
+            logError(error, context: "Generating next visible message")
         }
         Task { await prepareNextRandomMessage() }
     }
@@ -285,13 +259,14 @@ final class MessageStore {
         guard !isDictating, !isTranscribing, !isGenerating else { return }
 
         do {
-            errorMessage = nil
             dictatedText = ""
             isDictating = true
-            try await dictationService.startRecording()
+            try await dictationService.startRecording(
+                localeIdentifier: currentLanguageMode.source.localeIdentifier
+            )
         } catch {
             isDictating = false
-            errorMessage = error.localizedDescription
+            logError(error, context: "Starting dictation")
         }
     }
 
@@ -316,7 +291,7 @@ final class MessageStore {
             dictatedText = ""
             Task { await prepareNextRandomMessage() }
         } catch {
-            errorMessage = error.localizedDescription
+            logError(error, context: "Finishing dictation and submitting message")
         }
     }
 
@@ -339,7 +314,10 @@ final class MessageStore {
         defer { isSpeaking = false }
 
         do {
-            try await speechService.speak(currentMessage.targetText)
+            try await speechService.speak(
+                currentMessage.targetText,
+                localeIdentifier: currentLanguageMode.target.localeIdentifier
+            )
             updateCurrentAudioState(.ready)
         } catch is CancellationError {
             return
@@ -348,9 +326,7 @@ final class MessageStore {
                 return
             }
             updateCurrentAudioState(.failed(error.localizedDescription))
-            if !isAutomatic {
-                errorMessage = error.localizedDescription
-            }
+            logError(error, context: isAutomatic ? "Automatically speaking message" : "Speaking message")
         }
     }
 
@@ -361,7 +337,6 @@ final class MessageStore {
         defer { isGenerating = false }
 
         do {
-            errorMessage = nil
             let nextMessage = try await makeMessage()
             messages.append(nextMessage)
             currentIndex = messages.count - 1
@@ -371,7 +346,7 @@ final class MessageStore {
             scheduleAutoSpeakCurrentMessage()
         } catch {
             isShowingBlankCard = false
-            errorMessage = error.localizedDescription
+            logError(error, context: "Generating submitted message")
         }
     }
 
@@ -411,9 +386,7 @@ final class MessageStore {
                 Task { await prepareNextRandomMessage() }
                 return
             }
-            #if DEBUG
-            print("Next random message prefetch failed: \(error.localizedDescription)")
-            #endif
+            logError(error, context: "Prefetching next random message")
         }
     }
 
@@ -530,6 +503,18 @@ final class MessageStore {
     private func updateCurrentAudioState(_ audioState: MessageAudioState) {
         messages[currentIndex].audioState = audioState
         saveCurrentSession()
+    }
+
+    private func logError(_ error: Error, context: String) {
+        let nsError = error as NSError
+        let message = """
+        [TheChineseRoom] \(context) failed
+          error: \(String(reflecting: error))
+          domain: \(nsError.domain)
+          code: \(nsError.code)
+          userInfo: \(nsError.userInfo)
+        """
+        FileHandle.standardError.write(Data("\(message)\n".utf8))
     }
 
     private func bindDictationUpdates() {
