@@ -82,6 +82,13 @@ actor MessageQueueActor {
         return nextMessage
     }
 
+    /// A delayed startup/language-change reset must not cancel work already
+    /// requested for the new visible source.
+    func reset(unlessFor sourceID: UUID) {
+        guard inFlightSourceID != sourceID, queuedSourceID != sourceID else { return }
+        reset()
+    }
+
     func reset() {
         inFlightNext?.cancel()
         inFlightNext = nil

@@ -19,7 +19,7 @@ final class MessageSessionRecord {
         guard let persistedMessages = try? JSONDecoder().decode([PersistedMessage].self, from: messagesData),
               !persistedMessages.isEmpty
         else {
-            return [MockMessageService.openingMessage]
+            return [MockMessageService.openingMessage(for: LanguageCatalog.mode(id: modeID) ?? .defaultMode)]
         }
 
         return persistedMessages.map(\.learningMessage)

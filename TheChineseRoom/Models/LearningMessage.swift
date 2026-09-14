@@ -153,6 +153,25 @@ enum LanguageCatalog {
 
         return LanguageMode(source: source, target: target)
     }
+
+    static func speechPreview(for language: LanguageProfile) -> String {
+        let examples: [String]
+
+        switch language.id {
+        case englishUS.id:
+            examples = ["What a beautiful day.", "Let’s learn something new.", "It’s nice to meet you."]
+        case frenchFrance.id:
+            examples = ["Quelle belle journée.", "Apprenons quelque chose de nouveau.", "Ravi de vous rencontrer."]
+        case simplifiedChinese.id:
+            examples = ["今天天气真好。", "我们来学点新东西吧。", "很高兴认识你。"]
+        case koreanHangul.id:
+            examples = ["오늘 정말 좋은 날이에요.", "새로운 것을 배워 봅시다.", "만나서 반가워요."]
+        default:
+            examples = [language.nativeName]
+        }
+
+        return examples.randomElement() ?? language.nativeName
+    }
 }
 
 enum LanguageModeStorage {
@@ -171,36 +190,87 @@ enum LanguageModeStorage {
     }
 }
 
-struct AppLocale: Equatable {
-    let id: String
-    let strings: AppStrings
+enum SpeechVoiceStorage {
+    private static let keyPrefix = "speech_voice_for_mode_"
 
-    static let english = AppLocale(
-        id: "english_us",
-        strings: AppStrings(
-            examplesTitle: "Examples",
-            languageSelectorTitle: "Languages",
-            originalLanguageTitle: "Original language",
-            targetLanguageTitle: "Target language",
-            doneButtonTitle: "Done",
-            cancelButtonTitle: "Cancel",
-            firstLaunchTitle: "Choose languages",
-            firstLaunchSubtitle: "Select the language you know and the language you want to learn.",
-            continueButtonTitle: "Continue",
-            loadingMessageLabel: "Loading message"
-        )
-    )
+    static func voiceIdentifier(for mode: LanguageMode) -> String? {
+        UserDefaults.standard.string(forKey: keyPrefix + mode.id)
+    }
+
+    static func save(_ voiceIdentifier: String?, for mode: LanguageMode) {
+        let key = keyPrefix + mode.id
+        if let voiceIdentifier {
+            UserDefaults.standard.set(voiceIdentifier, forKey: key)
+        } else {
+            UserDefaults.standard.removeObject(forKey: key)
+        }
+    }
 }
 
+/// The learning source controls the interface, independently of device language.
+struct AppLocale: Equatable {
+    let id: String
+    var strings: AppStrings { AppStrings(localeIdentifier: id) }
+
+    static let english = AppLocale(id: "en")
+
+    static func forLanguage(_ language: LanguageProfile) -> AppLocale {
+        switch language.localeIdentifier.split(separator: "-").first {
+        case "fr": return AppLocale(id: "fr")
+        case "zh": return AppLocale(id: "zh-Hans")
+        case "ko": return AppLocale(id: "ko")
+        default: return .english
+        }
+    }
+}
+
+/// Typed access to Apple's compiled Interface.xcstrings resources.
 struct AppStrings: Equatable {
-    let examplesTitle: String
-    let languageSelectorTitle: String
-    let originalLanguageTitle: String
-    let targetLanguageTitle: String
-    let doneButtonTitle: String
-    let cancelButtonTitle: String
-    let firstLaunchTitle: String
-    let firstLaunchSubtitle: String
-    let continueButtonTitle: String
-    let loadingMessageLabel: String
+    let localeIdentifier: String
+
+    private func text(_ key: String) -> String {
+        let englishBundle = Bundle.main.path(forResource: "en", ofType: "lproj")
+            .flatMap { Bundle(path: $0) } ?? .main
+        let sourceBundle = Bundle.main.path(forResource: localeIdentifier, ofType: "lproj")
+            .flatMap { Bundle(path: $0) } ?? englishBundle
+        let fallback = englishBundle.localizedString(forKey: key, value: nil, table: "Interface")
+        return sourceBundle.localizedString(forKey: key, value: fallback, table: "Interface")
+    }
+
+    var literalUnavailable: String { text("literalUnavailable") }
+    var generationLanguageFailure: String { text("generationLanguageFailure") }
+    var examplesTitle: String { text("examplesTitle") }
+    var languageSelectorTitle: String { text("languageSelectorTitle") }
+    var originalLanguageTitle: String { text("originalLanguageTitle") }
+    var targetLanguageTitle: String { text("targetLanguageTitle") }
+    var doneButtonTitle: String { text("doneButtonTitle") }
+    var cancelButtonTitle: String { text("cancelButtonTitle") }
+    var firstLaunchTitle: String { text("firstLaunchTitle") }
+    var firstLaunchSubtitle: String { text("firstLaunchSubtitle") }
+    var continueButtonTitle: String { text("continueButtonTitle") }
+    var nextMessageLabel: String { text("nextMessageLabel") }
+    var generationInterruptedLabel: String { text("generationInterruptedLabel") }
+    var loadingMessageLabel: String { text("loadingMessageLabel") }
+    var settingsTitle: String { text("settingsTitle") }
+    var localTitle: String { text("localTitle") }
+    var localLabel: String { text("localLabel") }
+    var listeningLabel: String { text("listeningLabel") }
+    var inputPlaceholder: String { text("inputPlaceholder") }
+    var sendLabel: String { text("sendLabel") }
+    var holdToSpeakLabel: String { text("holdToSpeakLabel") }
+    var keyboardLabel: String { text("keyboardLabel") }
+    var playLabel: String { text("playLabel") }
+    var hideLiteralLabel: String { text("hideLiteralLabel") }
+    var showLiteralLabel: String { text("showLiteralLabel") }
+    var learningModeTitle: String { text("learningModeTitle") }
+    var voiceTitle: String { text("voiceTitle") }
+    var systemDefaultTitle: String { text("systemDefaultTitle") }
+    var voiceFooter: String { text("voiceFooter") }
+    var enhancedVoiceTitle: String { text("enhancedVoiceTitle") }
+    var defaultVoiceTitle: String { text("defaultVoiceTitle") }
+
+    func languageName(_ language: LanguageProfile) -> String {
+        Locale(identifier: localeIdentifier).localizedString(forIdentifier: language.localeIdentifier)
+            ?? language.nativeName
+    }
 }

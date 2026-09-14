@@ -1,11 +1,12 @@
 import SwiftUI
 import SwiftData
+import Translation
 
 struct AppView: View {
     @Environment(\.modelContext) private var modelContext
     @State private var store: MessageStore
     @State private var needsLanguageSetup: Bool
-    private let appLocale = AppLocale.english
+    private var appLocale: AppLocale { AppLocale.forLanguage(store.currentLanguageMode.source) }
 
     init() {
         let savedMode = LanguageModeStorage.currentMode
@@ -18,8 +19,7 @@ struct AppView: View {
         Group {
             if needsLanguageSetup {
                 FirstLaunchLanguageModeView(
-                    initialMode: store.currentLanguageMode,
-                    appStrings: appLocale.strings
+                    initialMode: store.currentLanguageMode
                 ) { selectedMode in
                     store.updateLanguageMode(selectedMode)
                     needsLanguageSetup = false
@@ -28,6 +28,12 @@ struct AppView: View {
                 MessageHomeView(store: store, appStrings: appLocale.strings)
             }
         }
+        .background {
+            if let translator = store.appleTranslation {
+                AppleTranslationHost(translator: translator)
+            }
+        }
+        .environment(\.locale, Locale(identifier: appLocale.id))
         .onAppear {
             store.attachPersistence(modelContext)
         }
@@ -41,13 +47,12 @@ struct AppView: View {
 private struct FirstLaunchLanguageModeView: View {
     @State private var source: LanguageProfile
     @State private var target: LanguageProfile
-    let appStrings: AppStrings
+    private var appStrings: AppStrings { AppLocale.forLanguage(source).strings }
     let onContinue: (LanguageMode) -> Void
 
-    init(initialMode: LanguageMode, appStrings: AppStrings, onContinue: @escaping (LanguageMode) -> Void) {
+    init(initialMode: LanguageMode, onContinue: @escaping (LanguageMode) -> Void) {
         _source = State(initialValue: initialMode.source)
         _target = State(initialValue: initialMode.target)
-        self.appStrings = appStrings
         self.onContinue = onContinue
     }
 
@@ -90,6 +95,7 @@ private struct FirstLaunchLanguageModeView: View {
             .padding(28)
         }
         .foregroundStyle(.black)
+        .environment(\.locale, Locale(identifier: appStrings.localeIdentifier))
     }
 
     private func languagePicker(title: String, selection: Binding<LanguageProfile>) -> some View {
@@ -100,7 +106,7 @@ private struct FirstLaunchLanguageModeView: View {
 
             Picker(title, selection: selection) {
                 ForEach(LanguageCatalog.supportedLanguages) { language in
-                    Text("\(language.displayName) · \(language.nativeName)")
+                    Text("\(appStrings.languageName(language)) · \(language.nativeName)")
                         .tag(language)
                 }
             }
@@ -111,5 +117,28 @@ private struct FirstLaunchLanguageModeView: View {
             .background(.white.opacity(0.52))
             .clipShape(RoundedRectangle(cornerRadius: 8))
         }
+    }
+}
+
+private struct AppleTranslationHost: View {
+    let translator: AppleTranslationService
+
+    var body: some View {
+        Color.clear
+            .frame(width: 0, height: 0)
+            .background {
+                if let request = translator.currentRequest {
+                    Color.clear
+                        .frame(width: 0, height: 0)
+                        .translationTask(
+                            source: Locale.Language(identifier: request.languageMode.source.localeIdentifier),
+                            target: Locale.Language(identifier: request.languageMode.target.localeIdentifier)
+                        ) { session in
+                            await translator.perform(request, using: session)
+                        }
+                        .id(request.id)
+                }
+            }
+            .onDisappear { translator.cancelAll() }
     }
 }

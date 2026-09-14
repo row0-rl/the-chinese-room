@@ -6,9 +6,9 @@ struct MessageHomeView: View {
     @State private var inputText = ""
     @State private var showsKeyboardInput = false
     @State private var showsLanguageSelector = false
-    @State private var cardDragOffsetY: CGFloat = 0
-    @State private var cardSettledOffsetY: CGFloat = 0
-    @State private var isCompletingCardSwipe = false
+    @State private var showsSettings = false
+    @State private var cardDragOffset: CGFloat = 0
+    @State private var isPaging = false
     @FocusState private var isInputFocused: Bool
 
     var body: some View {
@@ -33,32 +33,39 @@ struct MessageHomeView: View {
             }
 
             floatingLocalIndicator
+            settingsButton
         }
         .foregroundStyle(.black)
-        .animation(.snappy(duration: 0.2), value: store.nextRandomPreviewText)
         .onChange(of: store.currentMessage.id) { _, _ in
             Haptics.messageChanged()
+            recenterCardPager()
+        }
+        .onChange(of: store.isShowingBlankCard) { _, isShowingBlankCard in
+            guard isShowingBlankCard else { return }
+            recenterCardPager()
         }
         .sheet(isPresented: $showsLanguageSelector) {
             LanguageSelectionView(
-                languageMode: store.currentLanguageMode,
-                appStrings: appStrings
+                languageMode: store.currentLanguageMode
             ) { languageMode in
                 store.updateLanguageMode(languageMode)
             }
+        }
+        .sheet(isPresented: $showsSettings) {
+            SettingsView(store: store)
         }
     }
 
     private var floatingLocalIndicator: some View {
         HStack {
             if store.usesLocalMessages {
-                Text("Local")
+                Text(appStrings.localTitle)
                     .font(.caption.weight(.semibold))
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
                     .background(.black.opacity(0.08))
                     .clipShape(Capsule())
-                    .accessibilityLabel("Using local sample messages")
+                    .accessibilityLabel(appStrings.localLabel)
             }
             Spacer()
         }
@@ -68,56 +75,93 @@ struct MessageHomeView: View {
         .allowsHitTesting(true)
     }
 
+    private var settingsButton: some View {
+        HStack {
+            Spacer()
+            Button {
+                showsSettings = true
+            } label: {
+                Image(systemName: "gearshape.fill")
+                    .font(.body.weight(.semibold))
+                    .frame(width: 40, height: 40)
+                    .background(.white.opacity(0.42))
+                    .foregroundStyle(.black)
+                    .clipShape(Circle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(appStrings.settingsTitle)
+        }
+        .padding(.horizontal, 20)
+        .safeAreaPadding(.top, 8)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+    }
+
     private func cardViewportHeight(in availableHeight: CGFloat) -> CGFloat {
         let inputReserve: CGFloat = showsKeyboardInput ? 118 : 96
         let dictatedReserve: CGFloat = store.isDictating || store.isTranscribing || !store.dictatedText.isEmpty ? 58 : 0
         let previewReserve: CGFloat = 0
-        let reservedHeight = inputReserve + dictatedReserve + previewReserve + 8
+        let errorReserve: CGFloat = store.generationError == nil ? 0 : 92
+        let reservedHeight = inputReserve + dictatedReserve + previewReserve + errorReserve + 8
         return max(520, availableHeight - reservedHeight)
     }
 
     private func cardStack(height: CGFloat) -> some View {
         GeometryReader { proxy in
             let viewportHeight = proxy.size.height
-            let peekHeight: CGFloat = 72
+            let peekHeight: CGFloat = 64
             let cardHeight = max(300, min(380, viewportHeight - 120))
-            let currentCenterY = viewportHeight / 2
-            let previousCenterY = -cardHeight / 2 + peekHeight
-            let nextCenterY = viewportHeight + cardHeight / 2 - peekHeight
-            let previousDistance = currentCenterY - previousCenterY
-            let nextDistance = nextCenterY - currentCenterY
-            let activeOffset = clampedCardOffset(
-                cardDragOffsetY + cardSettledOffsetY,
-                previousDistance: previousDistance,
-                nextDistance: nextDistance
-            )
-            let previousProgress = min(1, max(0, activeOffset / previousDistance))
-            let nextProgress = min(1, max(0, -activeOffset / nextDistance))
+            // A centered card leaves exactly peekHeight of each neighbor visible.
+            let pageStride = (viewportHeight + cardHeight) / 2 - peekHeight
 
             ZStack {
-                stackedCard(
-                    message: store.previousCardMessage,
-                    edge: .bottom,
-                    progress: previousProgress
-                )
-                    .frame(width: proxy.size.width, height: cardHeight)
-                    .position(x: proxy.size.width / 2, y: previousCenterY + activeOffset)
+                if let previousMessage = store.previousCardMessage {
+                    MessageTitlePreview(title: previousMessage.normalizedSourceText, loadingLabel: appStrings.loadingMessageLabel, edge: .bottom)
+                        .frame(width: proxy.size.width, height: cardHeight)
+                        .offset(y: -pageStride + cardDragOffset)
+                        .allowsHitTesting(false)
+                        .accessibilityHidden(true)
+                }
 
                 currentCard
                     .frame(width: proxy.size.width, height: cardHeight)
-                    .position(x: proxy.size.width / 2, y: currentCenterY + activeOffset)
+                    .offset(y: cardDragOffset)
+                    .allowsHitTesting(!isPaging)
 
-                nextStackedCard(progress: nextProgress)
+                nextCard
                     .frame(width: proxy.size.width, height: cardHeight)
-                    .position(x: proxy.size.width / 2, y: nextCenterY + activeOffset)
+                    .offset(y: pageStride + cardDragOffset)
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
             }
-            .mask(cardStackFadeMask)
+            .frame(width: proxy.size.width, height: viewportHeight)
             .contentShape(Rectangle())
-            .simultaneousGesture(
-                cardSwipeGesture(
-                    previousDistance: previousDistance,
-                    nextDistance: nextDistance
-                )
+            .clipped()
+            .mask(cardStackFadeMask)
+            .gesture(
+                DragGesture(minimumDistance: 12)
+                    .onChanged { value in
+                        guard !isPaging else { return }
+                        let translation = value.translation.height
+                        // Resist dragging beyond the available history.
+                        if translation > 0, store.previousCardMessage == nil {
+                            cardDragOffset = min(40, translation * 0.15)
+                        } else {
+                            cardDragOffset = min(pageStride, max(-pageStride, translation))
+                        }
+                    }
+                    .onEnded { value in
+                        guard !isPaging else { return }
+                        let projectedOffset = value.predictedEndTranslation.height
+                        let page: CardPagerPage
+                        if projectedOffset < -pageStride * 0.3 {
+                            page = .next
+                        } else if projectedOffset > pageStride * 0.3, store.previousCardMessage != nil {
+                            page = .previous
+                        } else {
+                            page = .current
+                        }
+                        settleCardPager(on: page, stride: pageStride)
+                    }
             )
         }
         .frame(maxWidth: .infinity)
@@ -128,7 +172,7 @@ struct MessageHomeView: View {
     private var currentCard: some View {
         Group {
             if store.isShowingBlankCard {
-                MessageSkeletonCard()
+                MessageSkeletonCard(loadingLabel: appStrings.loadingMessageLabel)
                     .id("blank-\(store.currentMessage.id)")
             } else {
                 messageCard(store.currentMessage)
@@ -138,52 +182,13 @@ struct MessageHomeView: View {
     }
 
     private func messageCard(_ message: LearningMessage) -> some View {
-        MessageCard(message: message, examplesTitle: appStrings.examplesTitle) {
+        MessageCard(message: message, appStrings: appStrings) {
             Task { await store.speakCurrentMessage() }
         }
     }
 
-    private func peekCard(message: LearningMessage?, edge: VerticalEdge) -> some View {
-        Group {
-            if let message {
-                MessagePeekCard(message: message, edge: edge)
-                    .opacity(0.72)
-                    .allowsHitTesting(false)
-            } else {
-                Color.clear
-            }
-        }
-    }
-
-    private func stackedCard(message: LearningMessage?, edge: VerticalEdge, progress: CGFloat) -> some View {
-        Group {
-            if let message {
-                ZStack {
-                    MessagePeekCard(message: message, edge: edge)
-                        .opacity(0.72 * Double(1 - progress))
-
-                    messageCard(message)
-                        .opacity(Double(progress))
-                }
-                .allowsHitTesting(false)
-            } else {
-                Color.clear
-            }
-        }
-    }
-
-    private func nextStackedCard(progress: CGFloat) -> some View {
-        Group {
-            if let message = store.nextCardMessage {
-                stackedCard(message: message, edge: .top, progress: progress)
-            } else if progress > 0.001 {
-                MessageSkeletonCard()
-                    .opacity(max(0.72, Double(progress)))
-                    .allowsHitTesting(false)
-            } else {
-                Color.clear
-            }
-        }
+    private var nextCard: some View {
+        MessageTitlePreview(title: store.nextCardMessage?.normalizedSourceText, loadingLabel: store.isPreparingNextRandom || store.isGenerating ? appStrings.loadingMessageLabel : appStrings.nextMessageLabel, edge: .top)
     }
 
     private var cardStackFadeMask: some View {
@@ -193,7 +198,7 @@ struct MessageHomeView: View {
                 startPoint: .top,
                 endPoint: .bottom
             )
-            .frame(height: 42)
+            .frame(height: 16)
 
             Rectangle()
                 .fill(.black)
@@ -203,7 +208,7 @@ struct MessageHomeView: View {
                 startPoint: .top,
                 endPoint: .bottom
             )
-            .frame(height: 42)
+            .frame(height: 16)
         }
     }
 
@@ -219,11 +224,14 @@ struct MessageHomeView: View {
                 .clipShape(Circle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("Select languages: \(store.currentLanguageMode.displayName)")
+        .accessibilityLabel("\(appStrings.languageSelectorTitle): \(appStrings.languageName(store.currentLanguageMode.source)) → \(appStrings.languageName(store.currentLanguageMode.target))")
     }
 
     private var inputArea: some View {
         VStack(spacing: 12) {
+            if let error = store.generationError {
+                ErrorBanner(message: error)
+            }
             if showsKeyboardInput {
                 typedInputBar
                     .transition(.move(edge: .bottom).combined(with: .opacity))
@@ -260,7 +268,7 @@ struct MessageHomeView: View {
     }
 
     private var dictatedTextPreview: some View {
-        Text(store.dictatedText.isEmpty ? "Listening..." : store.dictatedText)
+        Text(store.dictatedText.isEmpty ? appStrings.listeningLabel : store.dictatedText)
             .font(.body.weight(.medium))
             .multilineTextAlignment(.center)
             .foregroundStyle(.black.opacity(store.dictatedText.isEmpty ? 0.55 : 0.85))
@@ -274,7 +282,7 @@ struct MessageHomeView: View {
 
     private var typedInputBar: some View {
         HStack(spacing: 10) {
-            TextField("Type an expression", text: $inputText, axis: .vertical)
+            TextField(appStrings.inputPlaceholder, text: $inputText, axis: .vertical)
                 .textFieldStyle(.plain)
                 .lineLimit(1...3)
                 .focused($isInputFocused)
@@ -292,7 +300,7 @@ struct MessageHomeView: View {
             }
             .disabled(inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || store.isGenerating)
             .opacity(inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.35 : 1)
-            .accessibilityLabel("Send expression")
+            .accessibilityLabel(appStrings.sendLabel)
         }
     }
 
@@ -310,7 +318,7 @@ struct MessageHomeView: View {
                 .foregroundStyle(Color.chineseRoomBackground)
                 .clipShape(Capsule())
                 .contentShape(Capsule())
-                    .accessibilityLabel("Hold to speak")
+                    .accessibilityLabel(appStrings.holdToSpeakLabel)
             .highPriorityGesture(
                 DragGesture(minimumDistance: 0)
                     .onChanged { _ in
@@ -334,90 +342,69 @@ struct MessageHomeView: View {
                     .foregroundStyle(.black)
                     .clipShape(Circle())
             }
-            .accessibilityLabel("Type with keyboard")
+            .accessibilityLabel(appStrings.keyboardLabel)
 
             Spacer(minLength: 0)
         }
         .frame(height: 48)
     }
 
-    private func cardSwipeGesture(previousDistance: CGFloat, nextDistance: CGFloat) -> some Gesture {
-        DragGesture(minimumDistance: 12)
-            .onChanged { value in
-                guard !isCompletingCardSwipe else { return }
-                guard abs(value.translation.height) > abs(value.translation.width) else { return }
+    private func commitSettledCardPage(_ page: CardPagerPage) {
+        guard page != .current else { return }
 
-                cardDragOffsetY = clampedCardOffset(
-                    value.translation.height,
-                    previousDistance: previousDistance,
-                    nextDistance: nextDistance
-                )
-            }
-            .onEnded { value in
-                guard !isCompletingCardSwipe else { return }
-                guard abs(value.translation.height) > abs(value.translation.width) else {
-                    resetCardDrag()
-                    return
-                }
-
-                let threshold: CGFloat = 84
-                let predictedThreshold: CGFloat = 132
-                if cardDragOffsetY < -threshold || value.predictedEndTranslation.height < -predictedThreshold {
-                    completeCardSwipe(.next, distance: nextDistance)
-                } else if (cardDragOffsetY > threshold || value.predictedEndTranslation.height > predictedThreshold),
-                          store.previousCardMessage != nil {
-                    completeCardSwipe(.previous, distance: previousDistance)
+        var shouldGenerateNextMessage = false
+        var transaction = Transaction()
+        transaction.disablesAnimations = true
+        withTransaction(transaction) {
+            switch page {
+            case .previous:
+                store.commitPreviousVisibleMessage()
+            case .current:
+                break
+            case .next:
+                if store.nextCardMessage == nil {
+                    store.showBlankNextMessage()
+                    shouldGenerateNextMessage = store.isShowingBlankCard
                 } else {
-                    resetCardDrag()
+                    store.commitNextVisibleMessage()
                 }
             }
-    }
-
-    private func clampedCardOffset(_ offset: CGFloat, previousDistance: CGFloat, nextDistance: CGFloat) -> CGFloat {
-        let minimumOffset: CGFloat = -nextDistance
-        let maximumOffset: CGFloat = store.previousCardMessage == nil ? 0 : previousDistance
-        return min(max(offset, minimumOffset), maximumOffset)
-    }
-
-    private func completeCardSwipe(_ direction: CardSwipeDirection, distance: CGFloat) {
-        isCompletingCardSwipe = true
-        let targetOffset = direction == .next ? -distance : distance
-
-        withAnimation(.snappy(duration: 0.28)) {
-            cardSettledOffsetY = targetOffset
-            cardDragOffsetY = 0
         }
 
-        Task { @MainActor in
-            try? await Task.sleep(nanoseconds: 280_000_000)
+        if shouldGenerateNextMessage {
+            Task { await store.finishBlankNextMessage() }
+        }
+    }
 
+    private func settleCardPager(on page: CardPagerPage, stride: CGFloat) {
+        let sourceMessageID = store.currentMessage.id
+        isPaging = true
+        withAnimation(.snappy(duration: 0.28), completionCriteria: .removed) {
+            switch page {
+            case .previous: cardDragOffset = stride
+            case .current: cardDragOffset = 0
+            case .next: cardDragOffset = -stride
+            }
+        } completion: {
+            // Reveal full content only after the title preview reaches the center.
+            // Swap atomically so preview and full titles never overlap.
             var transaction = Transaction()
             transaction.disablesAnimations = true
             withTransaction(transaction) {
-                switch direction {
-                case .next:
-                    if store.nextCardMessage == nil {
-                        store.showBlankNextMessage()
-                    } else {
-                        store.commitNextVisibleMessage()
-                    }
-                case .previous:
-                    store.commitPreviousVisibleMessage()
+                if store.currentMessage.id == sourceMessageID {
+                    commitSettledCardPage(page)
                 }
-                cardSettledOffsetY = 0
-                cardDragOffsetY = 0
-                isCompletingCardSwipe = false
-            }
-
-            if direction == .next, store.isShowingBlankCard {
-                await store.finishBlankNextMessage()
+                cardDragOffset = 0
+                isPaging = false
             }
         }
     }
 
-    private func resetCardDrag() {
-        withAnimation(.snappy(duration: 0.2)) {
-            cardDragOffsetY = 0
+    private func recenterCardPager() {
+        var transaction = Transaction()
+        transaction.disablesAnimations = true
+        withTransaction(transaction) {
+            cardDragOffset = 0
         }
     }
 
@@ -434,43 +421,39 @@ struct MessageHomeView: View {
     }
 }
 
-private enum CardSwipeDirection {
-    case next
+private enum CardPagerPage: Hashable {
     case previous
+    case current
+    case next
 }
 
-private struct MessagePeekCard: View {
-    let message: LearningMessage
+/// Neighbors contain only one title, anchored inside the visible 64-point edge.
+/// Full message content is introduced when paging commits, without a crossfade.
+private struct MessageTitlePreview: View {
+    let title: String?
+    let loadingLabel: String
     let edge: VerticalEdge
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            if edge == .bottom {
-                Spacer(minLength: 0)
-            }
-
-            Text(message.normalizedSourceText)
-                .font(.title3.weight(.semibold))
-                .lineLimit(2)
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-            if edge == .top {
-                Spacer(minLength: 0)
-            }
-        }
-        .padding(.horizontal, 24)
-        .padding(.vertical, 14)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: edge == .top ? .topLeading : .bottomLeading)
-        .background(.white.opacity(0.5))
-        .clipShape(RoundedRectangle(cornerRadius: 8))
-        .overlay(
-            RoundedRectangle(cornerRadius: 8)
-                .stroke(.black.opacity(0.08), lineWidth: 1)
-        )
+        Text(title ?? loadingLabel)
+            .font(.title3.weight(.semibold))
+            .lineLimit(1)
+            .foregroundStyle(.black.opacity(title == nil ? 0.45 : 1))
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(24)
+            .frame(maxWidth: .infinity, maxHeight: .infinity,
+                   alignment: edge == .top ? .topLeading : .bottomLeading)
+            .background(.white.opacity(0.5))
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(.black.opacity(0.08), lineWidth: 1)
+            )
     }
 }
 
 private struct MessageSkeletonCard: View {
+    let loadingLabel: String
     var body: some View {
         VStack(alignment: .leading, spacing: 22) {
             HStack(alignment: .top, spacing: 14) {
@@ -494,7 +477,7 @@ private struct MessageSkeletonCard: View {
         }
         .padding(24)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .frame(height: 360, alignment: .topLeading)
+        .frame(maxHeight: .infinity, alignment: .topLeading)
         .background(.white.opacity(0.5))
         .clipShape(RoundedRectangle(cornerRadius: 8))
         .overlay(
@@ -502,7 +485,7 @@ private struct MessageSkeletonCard: View {
                 .stroke(.black.opacity(0.08), lineWidth: 1)
         )
         .redacted(reason: .placeholder)
-        .accessibilityLabel(AppLocale.english.strings.loadingMessageLabel)
+        .accessibilityLabel(loadingLabel)
     }
 
     private func skeletonBar(width: CGFloat, height: CGFloat) -> some View {
@@ -512,17 +495,114 @@ private struct MessageSkeletonCard: View {
     }
 }
 
+private struct SettingsView: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var source: LanguageProfile
+    @State private var target: LanguageProfile
+    @State private var selectedVoiceIdentifier: String?
+    let store: MessageStore
+    private var appStrings: AppStrings { AppLocale.forLanguage(source).strings }
+
+    init(store: MessageStore) {
+        self.store = store
+        _source = State(initialValue: store.currentLanguageMode.source)
+        _target = State(initialValue: store.currentLanguageMode.target)
+        _selectedVoiceIdentifier = State(
+            initialValue: store.selectedVoiceIdentifier(for: store.currentLanguageMode)
+        )
+    }
+
+    private var editedMode: LanguageMode {
+        LanguageMode(source: source, target: target)
+    }
+
+    private var voices: [SpeechVoice] {
+        store.availableVoices(for: editedMode)
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section(appStrings.learningModeTitle) {
+                    Picker(appStrings.originalLanguageTitle, selection: $source) {
+                        ForEach(LanguageCatalog.supportedLanguages) { language in
+                            Text(appStrings.languageName(language)).tag(language)
+                        }
+                    }
+
+                    Picker(appStrings.targetLanguageTitle, selection: $target) {
+                        ForEach(LanguageCatalog.supportedLanguages) { language in
+                            Text(appStrings.languageName(language)).tag(language)
+                        }
+                    }
+                }
+
+                Section {
+                    Picker(appStrings.voiceTitle, selection: $selectedVoiceIdentifier) {
+                        Text(appStrings.systemDefaultTitle).tag(String?.none)
+                        ForEach(voices) { voice in
+                            Text("\(voice.name) · \(voice.qualityDescription == "Enhanced" ? appStrings.enhancedVoiceTitle : appStrings.defaultVoiceTitle)")
+                                .tag(Optional(voice.id))
+                        }
+                    }
+                    .pickerStyle(.navigationLink)
+                } header: {
+                    Text("\(appStrings.languageName(target)) · \(appStrings.voiceTitle)")
+                } footer: {
+                    Text(appStrings.voiceFooter)
+                }
+            }
+            .navigationTitle(appStrings.settingsTitle)
+            .navigationBarTitleDisplayMode(.inline)
+            .environment(\.locale, Locale(identifier: appStrings.localeIdentifier))
+            .onChange(of: source) { oldValue, _ in
+                guard oldValue != source else { return }
+                loadVoiceForEditedMode()
+            }
+            .onChange(of: target) { oldValue, _ in
+                guard oldValue != target else { return }
+                loadVoiceForEditedMode()
+            }
+            .onChange(of: selectedVoiceIdentifier) { oldValue, newValue in
+                guard oldValue != newValue else { return }
+                Task {
+                    await store.previewVoice(newValue, for: editedMode)
+                }
+            }
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(appStrings.cancelButtonTitle) {
+                        dismiss()
+                    }
+                }
+
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(appStrings.doneButtonTitle) {
+                        store.updateVoiceIdentifier(selectedVoiceIdentifier, for: editedMode)
+                        store.updateLanguageMode(editedMode)
+                        dismiss()
+                    }
+                    .disabled(source == target)
+                }
+            }
+        }
+    }
+
+    private func loadVoiceForEditedMode() {
+        selectedVoiceIdentifier = store.selectedVoiceIdentifier(for: editedMode)
+    }
+}
+
 private struct LanguageSelectionView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var source: LanguageProfile
     @State private var target: LanguageProfile
-    let appStrings: AppStrings
+    private var appStrings: AppStrings { AppLocale.forLanguage(source).strings }
     let onSave: (LanguageMode) -> Void
 
-    init(languageMode: LanguageMode, appStrings: AppStrings, onSave: @escaping (LanguageMode) -> Void) {
+    init(languageMode: LanguageMode, onSave: @escaping (LanguageMode) -> Void) {
         _source = State(initialValue: languageMode.source)
         _target = State(initialValue: languageMode.target)
-        self.appStrings = appStrings
         self.onSave = onSave
     }
 
@@ -532,7 +612,7 @@ private struct LanguageSelectionView: View {
                 Section(appStrings.originalLanguageTitle) {
                     Picker(appStrings.originalLanguageTitle, selection: $source) {
                         ForEach(LanguageCatalog.supportedLanguages) { language in
-                            Text(language.displayName)
+                            Text(appStrings.languageName(language))
                                 .tag(language)
                         }
                     }
@@ -541,7 +621,7 @@ private struct LanguageSelectionView: View {
                 Section(appStrings.targetLanguageTitle) {
                     Picker(appStrings.targetLanguageTitle, selection: $target) {
                         ForEach(LanguageCatalog.supportedLanguages) { language in
-                            Text(language.displayName)
+                            Text(appStrings.languageName(language))
                                 .tag(language)
                         }
                     }
@@ -549,6 +629,7 @@ private struct LanguageSelectionView: View {
             }
             .navigationTitle(appStrings.languageSelectorTitle)
             .navigationBarTitleDisplayMode(.inline)
+            .environment(\.locale, Locale(identifier: appStrings.localeIdentifier))
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(appStrings.cancelButtonTitle) {

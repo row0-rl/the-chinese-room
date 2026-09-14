@@ -2,14 +2,17 @@ import Foundation
 import FoundationModels
 
 struct FoundationModelsMessageService: MessageService {
-    private let model: SystemLanguageModel
+    private let runtime: AppleMessageRuntime
+    private let translator: any TextTranslationService
     private let onTranslationReady: ((String) async -> Void)?
 
     init(
-        model: SystemLanguageModel = .default,
+        runtime: AppleMessageRuntime,
+        translator: any TextTranslationService,
         onTranslationReady: ((String) async -> Void)? = nil
     ) {
-        self.model = model
+        self.runtime = runtime
+        self.translator = translator
         self.onTranslationReady = onTranslationReady
     }
 
@@ -36,29 +39,31 @@ struct FoundationModelsMessageService: MessageService {
         languageMode: LanguageMode,
         recentMessages: [LearningMessage]
     ) async throws -> LearningMessage {
-        try ensureModelIsAvailable()
 
-        let translationSession = LanguageModelSession(model: model, instructions: MessageGenerationPrompt.instructions)
-        let translationResponse = try await translationSession.respond(
-            to: MessageGenerationPrompt.userPrompt(
-                mode: mode,
-                userInput: userInput,
-                languageMode: languageMode,
-                recentMessages: recentMessages
-            ),
-            generating: GeneratedTranslation.self
+        let prompt = MessageGenerationPrompt.sourcePrompt(
+            mode: mode, userInput: userInput, languageMode: languageMode, recentMessages: recentMessages
         )
-        let translation = translationResponse.content
+        guard let source = try await GeneratedLanguageCheck.validated(generate: { issue in
+            let repair = issue.map { "\nRepair the response: " + $0 } ?? ""
+            return try await runtime.respond(to: prompt + repair, generating: GeneratedSource.self, languages: [languageMode.source])
+        }, validate: { GeneratedLanguageCheck.issue(in: $0.sourceText, expected: languageMode.source, field: "sourceText", userInput: userInput) }) else {
+            throw FoundationModelsServiceError.languageMismatch(languageMode.source)
+        }
+
+        try Task.checkCancellation()
+        let targetText = try await translator.translate(source.sourceText, languageMode: languageMode)
+        try Task.checkCancellation()
+        let translation = GeneratedTranslation(sourceText: source.sourceText, targetText: targetText, examples: nil)
 
         if let onTranslationReady {
             Task { await onTranslationReady(translation.targetText) }
         }
 
-        let alignment = try await generateValidAlignment(translation: translation, languageMode: languageMode)
+        let alignment = try await generateValidAlignment(translation: translation, languageMode: languageMode, userInput: userInput)
         let examples = translation.examples?.map {
             MessageExample(sourceText: $0.sourceText, targetText: $0.targetText)
         }
-        let literalChunks = alignment.literalChunks.map {
+        let literalChunks = (alignment?.literalChunks ?? []).map {
             MessageLiteralChunk(targetText: $0.targetText, literalText: $0.literalText)
         }
 
@@ -72,126 +77,82 @@ struct FoundationModelsMessageService: MessageService {
         )
     }
 
-    private func generateValidAlignment(
-        translation: GeneratedTranslation,
-        languageMode: LanguageMode
-    ) async throws -> GeneratedAlignment {
-        let first = try await generateAlignment(
-            translation: translation,
-            languageMode: languageMode,
-            validationError: nil
-        )
-        guard let validationError = alignmentValidationError(first, targetText: translation.targetText) else {
-            return first
-        }
-
-        let retry = try await generateAlignment(
-            translation: translation,
-            languageMode: languageMode,
-            validationError: validationError
-        )
-        guard alignmentValidationError(retry, targetText: translation.targetText) != nil else {
-            return retry
-        }
-
-        return GeneratedAlignment(literalChunks: [
-            GeneratedLiteralChunk(
-                targetText: translation.targetText,
-                literalText: retry.literalChunks.map(\.literalText).joined(separator: " ")
-            )
-        ])
-    }
-
-    private func generateAlignment(
+    func generateValidAlignment(
         translation: GeneratedTranslation,
         languageMode: LanguageMode,
-        validationError: String?
-    ) async throws -> GeneratedAlignment {
-        let session = LanguageModelSession(model: model, instructions: MessageGenerationPrompt.instructions)
-        return try await session.respond(
-            to: MessageGenerationPrompt.alignmentPrompt(
-                targetText: translation.targetText,
-                languageMode: languageMode,
-                validationError: validationError
-            ),
-            generating: GeneratedAlignment.self
-        ).content
-    }
+        userInput: String?
+    ) async throws -> GeneratedAlignment? {
+        do {
+            var chunks: [String]?
+            var previous: String?
+            var issue: String?
+            let delimiter = MessageGenerationPrompt.segmentationDelimiter(for: translation.targetText)
+            for _ in 0..<2 {
+                try Task.checkCancellation()
+                let response = try await runtime.segmentText(
+                    to: MessageGenerationPrompt.segmentationPrompt(targetText: translation.targetText, languageMode: languageMode, delimiter: delimiter, previous: previous, issue: issue),
+                    languages: [languageMode.target]
+                )
+                previous = response
+                let pieces = response.components(separatedBy: delimiter)
+                let formatted = GeneratedMessageValidation.restoringTargetFormatting(
+                    GeneratedAlignment(literalChunks: pieces.map { GeneratedLiteralChunk(targetText: $0, literalText: "") }),
+                    targetText: translation.targetText
+                ).literalChunks.map(\.targetText)
+                issue = GeneratedMessageValidation.segmentationValidationError(formatted, targetText: translation.targetText)
+                if issue == nil { chunks = formatted; break }
+                logBreakdownFailure("Segmentation rejected: " + (issue ?? ""))
+            }
+            guard let chunks else { return nil }
 
-    private func alignmentValidationError(_ alignment: GeneratedAlignment, targetText: String) -> String? {
-        guard !alignment.literalChunks.isEmpty else { return "literalChunks is empty." }
-        let chunks = alignment.literalChunks.map(\.targetText)
-        let normalizedTarget = normalizedAlignmentText(targetText)
-        let reconstructions = [chunks.joined(), chunks.joined(separator: " ")].map(normalizedAlignmentText)
-        guard reconstructions.contains(normalizedTarget) else {
-            return "The chunks do not reconstruct the target expression exactly."
+            var accepted: [Int: String] = [:]
+            var requested = Array(chunks.indices)
+            previous = nil
+            issue = nil
+            // One batch normally; one repair batch containing only invalid/missing IDs.
+            for _ in 0..<2 {
+                try Task.checkCancellation()
+                let response = try await runtime.respond(
+                    to: MessageGenerationPrompt.glossPrompt(chunks: chunks, requestedIDs: requested, targetText: translation.targetText, sourceText: translation.sourceText, languageMode: languageMode, previous: previous, issue: issue),
+                    generating: GeneratedGlosses.self, languages: [languageMode.source, languageMode.target]
+                )
+                previous = response.generatedContent.jsonString
+                var failures: [String] = []
+                for id in requested {
+                    let matches = response.glosses.filter { $0.chunkID == id }
+                    guard matches.count == 1 else {
+                        failures.append("Chunk ID \(id) needs exactly one gloss; received \(matches.count).")
+                        continue
+                    }
+                    if let error = GeneratedMessageValidation.glossValidationError(matches[0].literalText, language: languageMode.source, userInput: userInput) {
+                        failures.append("Chunk ID \(id): \(error)")
+                    } else {
+                        accepted[id] = matches[0].literalText
+                    }
+                }
+                requested = chunks.indices.filter { accepted[$0] == nil }
+                if requested.isEmpty {
+                    return GeneratedAlignment(literalChunks: chunks.indices.map {
+                        GeneratedLiteralChunk(targetText: chunks[$0], literalText: accepted[$0]!)
+                    })
+                }
+                issue = failures.joined(separator: "\n")
+                logBreakdownFailure("Glosses rejected: " + (issue ?? ""))
+            }
+            return nil
+        } catch {
+            if error is CancellationError || Task.isCancelled || (error as? URLError)?.code == .cancelled {
+                throw error
+            }
+            // Optional breakdown failures must not discard the completed translation.
+            logBreakdownFailure("Breakdown generation failed: \(String(reflecting: error))")
+            return nil
         }
-        return nil
     }
 
-    private func normalizedAlignmentText(_ text: String) -> String {
-        text
-            .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
-            .replacingOccurrences(of: "\\s+([?.!,;:])", with: "$1", options: .regularExpression)
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-
-    private func ensureModelIsAvailable() throws {
-        guard case .available = model.availability else {
-            throw FoundationModelsServiceError.unavailable(model.availability)
-        }
-    }
-}
-
-@Generable(description: "A corrected source expression and its natural target-language translation.")
-struct GeneratedTranslation {
-    @Guide(description: "The corrected, natural expression in the source language.")
-    let sourceText: String
-
-    @Guide(description: "A natural translation in the target language.")
-    let targetText: String
-
-    @Guide(description: "Exactly two short, distinct usage examples when useful; otherwise omit them.", .count(2))
-    let examples: [GeneratedExample]?
-}
-
-@Generable
-struct GeneratedExample {
-    @Guide(description: "A natural example sentence in the source language.")
-    let sourceText: String
-
-    @Guide(description: "A natural translation of the example in the target language.")
-    let targetText: String
-}
-
-@Generable(description: "A complete ordered literal alignment of a target-language expression.")
-struct GeneratedAlignment {
-    @Guide(description: "Ordered chunks covering the complete target expression.", .minimumCount(1))
-    let literalChunks: [GeneratedLiteralChunk]
-}
-
-@Generable
-struct GeneratedLiteralChunk {
-    @Guide(description: "An exact target-language chunk copied from the expression, preserving order and punctuation.")
-    let targetText: String
-
-    @Guide(description: "The direct word-by-word source-language counterpart.")
-    let literalText: String
-}
-
-enum FoundationModelsServiceError: LocalizedError {
-    case unavailable(SystemLanguageModel.Availability)
-
-    var errorDescription: String? {
-        switch self {
-        case .unavailable(.unavailable(.deviceNotEligible)):
-            "On-device language generation is not supported on this iPhone."
-        case .unavailable(.unavailable(.appleIntelligenceNotEnabled)):
-            "Turn on Apple Intelligence in Settings to generate messages."
-        case .unavailable(.unavailable(.modelNotReady)):
-            "The on-device language model is still downloading. Try again later."
-        case .unavailable:
-            "The on-device language model is unavailable."
-        }
+    private func logBreakdownFailure(_ message: String) {
+        #if DEBUG
+        FileHandle.standardError.write(Data("[TheChineseRoom] \(message)\n".utf8))
+        #endif
     }
 }

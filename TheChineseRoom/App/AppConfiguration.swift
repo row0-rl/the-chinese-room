@@ -1,7 +1,5 @@
-import FoundationModels
-
 struct AppConfiguration {
-    let languageModel: SystemLanguageModel
+    var persistsMessageHistory = false
 
-    static let current = AppConfiguration(languageModel: .default)
+    static let current = AppConfiguration()
 }

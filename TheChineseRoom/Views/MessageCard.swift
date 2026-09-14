@@ -2,7 +2,7 @@ import SwiftUI
 
 struct MessageCard: View {
     let message: LearningMessage
-    let examplesTitle: String
+    let appStrings: AppStrings
     let onSpeak: () -> Void
     @State private var showsLiteralChunks = false
 
@@ -22,7 +22,7 @@ struct MessageCard: View {
 
             if let examples = message.examples, !examples.isEmpty {
                 VStack(alignment: .leading, spacing: 12) {
-                    Text(examplesTitle)
+                    Text(appStrings.examplesTitle)
                         .font(.headline)
                     ForEach(examples) { example in
                         VStack(alignment: .leading, spacing: 4) {
@@ -43,7 +43,7 @@ struct MessageCard: View {
             }
         }
         .padding(24)
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(.white.opacity(0.5))
         .clipShape(RoundedRectangle(cornerRadius: 8))
         .overlay(
@@ -63,7 +63,7 @@ struct MessageCard: View {
                 .clipShape(Circle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("Play pronunciation")
+        .accessibilityLabel(appStrings.playLabel)
     }
 
     private var literalToggleButton: some View {
@@ -78,31 +78,41 @@ struct MessageCard: View {
                 .clipShape(Circle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(showsLiteralChunks ? "Hide literal translation" : "Show literal translation")
+        .accessibilityLabel(showsLiteralChunks ? appStrings.hideLiteralLabel : appStrings.showLiteralLabel)
     }
 
+    @ViewBuilder
     private var alignedChunks: some View {
-        FlowLayout(spacing: 8, lineSpacing: showsLiteralChunks ? 12 : 4) {
-            ForEach(message.literalChunks) { chunk in
-                VStack(alignment: .center, spacing: 3) {
-                    Text(chunk.targetText)
-                        .font(.custom("ChalkboardSE-Bold", size: targetFontSize))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.82)
+        if message.literalChunks.isEmpty {
+            VStack(alignment: .leading, spacing: 12) {
+                targetText
+                Text(appStrings.literalUnavailable)
+                    .font(.body)
+                    .foregroundStyle(.black.opacity(0.7))
+            }
+        } else {
+            FlowLayout(spacing: 8, lineSpacing: showsLiteralChunks ? 12 : 4) {
+                ForEach(message.literalChunks) { chunk in
+                    VStack(alignment: .center, spacing: 3) {
+                        Text(chunk.targetText)
+                            .font(.custom("ChalkboardSE-Bold", size: targetFontSize))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.82)
 
-                    if showsLiteralChunks {
-                        Text(chunk.literalText)
-                            .font(.body)
-                            .foregroundStyle(.black.opacity(0.7))
-                            .multilineTextAlignment(.center)
-                            .fixedSize(horizontal: false, vertical: true)
+                        if showsLiteralChunks {
+                            Text(chunk.literalText)
+                                .font(.body)
+                                .foregroundStyle(.black.opacity(0.7))
+                                .multilineTextAlignment(.center)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
                     }
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, showsLiteralChunks ? 8 : 2)
+                    .padding(.vertical, showsLiteralChunks ? 6 : 2)
+                    .background(showsLiteralChunks ? .black.opacity(0.08) : .clear)
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
                 }
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, showsLiteralChunks ? 8 : 2)
-                .padding(.vertical, showsLiteralChunks ? 6 : 2)
-                .background(showsLiteralChunks ? .black.opacity(0.08) : .clear)
-                .clipShape(RoundedRectangle(cornerRadius: 6))
             }
         }
     }

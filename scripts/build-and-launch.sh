@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Use the project’s Xcode 27 toolchain unless explicitly overridden.
+if [[ -z "${DEVELOPER_DIR:-}" && -d "$HOME/Downloads/Xcode-beta.app" ]]; then
+  export DEVELOPER_DIR="$HOME/Downloads/Xcode-beta.app/Contents/Developer"
+fi
+
 PROJECT="${PROJECT:-TheChineseRoom.xcodeproj}"
 SCHEME="${SCHEME:-TheChineseRoom}"
 CONFIGURATION="${CONFIGURATION:-Debug}"
@@ -132,6 +137,7 @@ xcodebuild \
   -scheme "$SCHEME" \
   -configuration "$CONFIGURATION" \
   -destination "$DESTINATION" \
+  -allowProvisioningUpdates \
   -derivedDataPath "$DERIVED_DATA_ABS" \
   build
 

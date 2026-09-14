@@ -14,16 +14,42 @@ final class SystemSpeechService: NSObject, SpeechService, AVSpeechSynthesizerDel
         AVAudioSession.sharedInstance().outputVolume > 0
     }
 
+    func availableVoices(localeIdentifier: String) -> [SpeechVoice] {
+        let requestedLanguage = Locale.Language(identifier: localeIdentifier)
+
+        return AVSpeechSynthesisVoice.speechVoices()
+            .filter { voice in
+                let voiceLanguage = Locale.Language(identifier: voice.language)
+                return voiceLanguage.languageCode == requestedLanguage.languageCode
+            }
+            .map { voice in
+                SpeechVoice(
+                    id: voice.identifier,
+                    name: voice.name,
+                    language: voice.language,
+                    qualityDescription: voice.quality == .enhanced ? "Enhanced" : "Default"
+                )
+            }
+            .sorted {
+                if $0.qualityDescription != $1.qualityDescription {
+                    return $0.qualityDescription == "Enhanced"
+                }
+                return $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
+            }
+    }
+
     func prepareSpeechAudio(_ text: String, localeIdentifier: String) async throws {
         guard AVSpeechSynthesisVoice(language: localeIdentifier) != nil else {
             throw SystemSpeechServiceError.voiceUnavailable(localeIdentifier)
         }
     }
 
-    func speak(_ text: String, localeIdentifier: String) async throws {
+    func speak(_ text: String, localeIdentifier: String, voiceIdentifier: String?) async throws {
         synthesizer.stopSpeaking(at: .immediate)
         guard isSpeechAudioEnabled else { return }
-        guard let voice = AVSpeechSynthesisVoice(language: localeIdentifier) else {
+        guard let voice = voiceIdentifier.flatMap(AVSpeechSynthesisVoice.init(identifier:))
+            ?? AVSpeechSynthesisVoice(language: localeIdentifier)
+        else {
             throw SystemSpeechServiceError.voiceUnavailable(localeIdentifier)
         }
 

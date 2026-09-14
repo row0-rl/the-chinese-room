@@ -1,4 +1,21 @@
 struct MockMessageService: MessageService {
+    // The starter is also used as context for the first generated message.
+    // Never seed a Chinese/Korean session with the English/French demo card.
+    static func openingMessage(for mode: LanguageMode) -> LearningMessage {
+        func expression(_ language: LanguageProfile) -> String {
+            switch language.id {
+            case LanguageCatalog.simplifiedChinese.id: return "我饿了。"
+            case LanguageCatalog.koreanHangul.id: return "배고파요."
+            case LanguageCatalog.frenchFrance.id: return "J’ai faim."
+            default: return "I am hungry."
+            }
+        }
+        let source = expression(mode.source)
+        return LearningMessage(sourceText: source, normalizedSourceText: source,
+                               targetText: expression(mode.target), literalMeaning: "",
+                               literalChunks: [], examples: nil)
+    }
+
     static let openingMessage = LearningMessage(
         sourceText: "I am hungry.",
         normalizedSourceText: "I am hungry.",
