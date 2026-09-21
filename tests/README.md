@@ -46,3 +46,14 @@ It covers segmentation repair with previous output, missing and duplicate gloss
 IDs, out-of-order results, targeted repairs that preserve good glosses, model
 failure isolation, cancellation propagation, and translation queue cancellation.
 The app’s SwiftUI host handles translation download consent.
+
+Pinyin pronunciation and chunk alignment:
+
+```sh
+bash scripts/test-pinyin-notation.sh
+```
+
+Checks full-expression Apple transliteration, chunk coverage, mixed Latin text,
+punctuation normalization, and safe failure for unconverted characters. These
+checks verify alignment; Apple can still choose an incorrect reading for a
+polyphonic character (for example, 行 in 银行).

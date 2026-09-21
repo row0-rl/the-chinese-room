@@ -3,8 +3,10 @@ import SwiftUI
 struct MessageCard: View {
     let message: LearningMessage
     let appStrings: AppStrings
+    let notationSystem: PronunciationNotationSystem
     let onSpeak: () -> Void
     @State private var showsLiteralChunks = false
+    @State private var showsPronunciation = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 22) {
@@ -13,7 +15,7 @@ struct MessageCard: View {
                     .font(.title3.weight(.semibold))
                     .frame(maxWidth: .infinity, alignment: .leading)
 
-                if showsLiteralChunks {
+                if showsLiteralChunks || showsPronunciation {
                     alignedChunks
                 } else {
                     targetText
@@ -38,6 +40,7 @@ struct MessageCard: View {
 
             HStack {
                 Spacer()
+                pronunciationToggleButton
                 literalToggleButton
                 speakButton
             }
@@ -66,6 +69,31 @@ struct MessageCard: View {
         .accessibilityLabel(appStrings.playLabel)
     }
 
+    private var pronunciationToggleButton: some View {
+        Button {
+            showsPronunciation.toggle()
+        } label: {
+            Text("ə")
+                .font(.title3.weight(.semibold))
+                .frame(width: 44, height: 44)
+                .background(.black.opacity(showsPronunciation ? 0.14 : 0.08))
+                .foregroundStyle(.black)
+                .clipShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(showsPronunciation ? appStrings.hidePronunciationLabel : appStrings.showPronunciationLabel)
+        .accessibilityAddTraits(showsPronunciation ? .isSelected : [])
+    }
+
+    private func pronunciationLabel(_ text: String?) -> some View {
+        let value = text ?? (notationSystem == .pinyin ? "—" : notationSystem.placeholder)
+        return Text(value)
+            .font(.caption)
+            .foregroundStyle(.black.opacity(0.6))
+            .accessibilityLabel(text ?? (notationSystem == .pinyin
+                ? appStrings.pronunciationUnavailable : appStrings.pronunciationPlaceholder))
+    }
+
     private var literalToggleButton: some View {
         Button {
             showsLiteralChunks.toggle()
@@ -83,38 +111,90 @@ struct MessageCard: View {
 
     @ViewBuilder
     private var alignedChunks: some View {
-        if message.literalChunks.isEmpty {
+        let units = showsPronunciation
+            ? PronunciationLayout.units(text: message.targetText, system: notationSystem) : []
+        let groups = PronunciationLayout.groups(text: message.targetText, units: units, chunks: message.literalChunks)
+        if showsPronunciation && !showsLiteralChunks {
+            pronunciationFlow(units)
+        } else if message.literalChunks.isEmpty {
             VStack(alignment: .leading, spacing: 12) {
-                targetText
+                if showsPronunciation {
+                    pronunciationFlow(units)
+                } else {
+                    targetText
+                }
                 Text(appStrings.literalUnavailable)
                     .font(.body)
                     .foregroundStyle(.black.opacity(0.7))
             }
+        } else if showsPronunciation, let groups {
+            FlowLayout(spacing: 8, lineSpacing: 12) {
+                ForEach(groups) { group in
+                    VStack(spacing: 3) {
+                        HStack(alignment: .top, spacing: 0) {
+                            ForEach(group.units) { unit in
+                                pronunciationUnit(unit)
+                            }
+                        }
+                        HStack(alignment: .top, spacing: 8) {
+                            ForEach(group.chunks) { chunk in
+                                Text(chunk.literalText)
+                                    .font(.body)
+                                    .foregroundStyle(.black.opacity(0.7))
+                                    .multilineTextAlignment(.center)
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 6)
+                    .background(.black.opacity(0.08))
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                }
+            }
         } else {
-            FlowLayout(spacing: 8, lineSpacing: showsLiteralChunks ? 12 : 4) {
-                ForEach(message.literalChunks) { chunk in
-                    VStack(alignment: .center, spacing: 3) {
-                        Text(chunk.targetText)
-                            .font(.custom("ChalkboardSE-Bold", size: targetFontSize))
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.82)
-
-                        if showsLiteralChunks {
+            VStack(alignment: .leading, spacing: 12) {
+                // If legacy chunk formatting cannot be mapped, keep pronunciation aligned
+                // to the whole sentence instead of assigning it to the wrong literal chunk.
+                if showsPronunciation { pronunciationFlow(units) }
+                FlowLayout(spacing: 8, lineSpacing: 12) {
+                    ForEach(message.literalChunks) { chunk in
+                        VStack(spacing: 3) {
+                            Text(chunk.targetText)
+                                .font(.custom("ChalkboardSE-Bold", size: targetFontSize))
                             Text(chunk.literalText)
                                 .font(.body)
                                 .foregroundStyle(.black.opacity(0.7))
                                 .multilineTextAlignment(.center)
-                                .fixedSize(horizontal: false, vertical: true)
                         }
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 6)
+                        .background(.black.opacity(0.08))
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
                     }
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, showsLiteralChunks ? 8 : 2)
-                    .padding(.vertical, showsLiteralChunks ? 6 : 2)
-                    .background(showsLiteralChunks ? .black.opacity(0.08) : .clear)
-                    .clipShape(RoundedRectangle(cornerRadius: 6))
                 }
             }
         }
+    }
+
+    private func pronunciationFlow(_ units: [PronunciationUnit]) -> some View {
+        FlowLayout(spacing: 0, lineSpacing: 8) {
+            ForEach(units) { unit in
+                pronunciationUnit(unit)
+            }
+        }
+    }
+
+    private func pronunciationUnit(_ unit: PronunciationUnit) -> some View {
+        VStack(spacing: 3) {
+            if unit.needsNotation {
+                pronunciationLabel(unit.notation)
+            } else {
+                Text(" ").font(.caption).accessibilityHidden(true)
+            }
+            Text(unit.text)
+                .font(.custom("ChalkboardSE-Bold", size: targetFontSize))
+        }
+        .fixedSize()
     }
 
     private var targetText: some View {

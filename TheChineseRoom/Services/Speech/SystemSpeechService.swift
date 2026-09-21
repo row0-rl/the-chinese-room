@@ -20,23 +20,26 @@ final class SystemSpeechService: NSObject, SpeechService, AVSpeechSynthesizerDel
         return AVSpeechSynthesisVoice.speechVoices()
             .filter { voice in
                 let voiceLanguage = Locale.Language(identifier: voice.language)
-                return voiceLanguage.languageCode == requestedLanguage.languageCode
+                return voice.quality == .premium
+                    && voiceLanguage.languageCode == requestedLanguage.languageCode
             }
             .map { voice in
                 SpeechVoice(
                     id: voice.identifier,
                     name: voice.name,
                     language: voice.language,
-                    qualityDescription: voice.quality == .enhanced ? "Enhanced" : "Default"
+                    qualityDescription: voice.quality == .premium ? "Premium" : (voice.quality == .enhanced ? "Enhanced" : "Default")
                 )
             }
             .sorted {
                 if $0.qualityDescription != $1.qualityDescription {
-                    return $0.qualityDescription == "Enhanced"
+                    let qualityOrder = ["Premium": 2, "Enhanced": 1, "Default": 0]
+                    return qualityOrder[$0.qualityDescription, default: 0] > qualityOrder[$1.qualityDescription, default: 0]
                 }
                 return $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
             }
     }
+
 
     func prepareSpeechAudio(_ text: String, localeIdentifier: String) async throws {
         guard AVSpeechSynthesisVoice(language: localeIdentifier) != nil else {

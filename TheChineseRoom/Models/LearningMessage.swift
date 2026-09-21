@@ -80,6 +80,28 @@ struct LanguageProfile: Identifiable, Codable, Equatable, Hashable {
     }
 }
 
+/// Available notation choices are defined independently of pronunciation generation.
+enum PronunciationNotationSystem: String, Codable, CaseIterable {
+    case ipa
+    case pinyin
+    case revisedRomanization
+
+    static func fixedSystem(for language: LanguageProfile) -> Self {
+        switch language.id {
+        case LanguageCatalog.simplifiedChinese.id: .pinyin
+        case LanguageCatalog.koreanHangul.id: .revisedRomanization
+        default: .ipa
+        }
+    }
+
+    var placeholder: String {
+        switch self {
+        case .ipa: "/…/"
+        case .pinyin, .revisedRomanization: "…"
+        }
+    }
+}
+
 struct LanguageMode: Identifiable, Codable, Equatable {
     let source: LanguageProfile
     let target: LanguageProfile
@@ -262,10 +284,30 @@ struct AppStrings: Equatable {
     var playLabel: String { text("playLabel") }
     var hideLiteralLabel: String { text("hideLiteralLabel") }
     var showLiteralLabel: String { text("showLiteralLabel") }
+    var showPronunciationLabel: String { text("showPronunciationLabel") }
+    var hidePronunciationLabel: String { text("hidePronunciationLabel") }
+    var pronunciationTitle: String { text("pronunciationTitle") }
+    var notationSystemTitle: String { text("notationSystemTitle") }
+    var pronunciationPlaceholder: String { text("pronunciationPlaceholder") }
+    var pronunciationUnavailable: String { text("pronunciationUnavailable") }
+    var pinyinFooter: String { text("pinyinFooter") }
+    var pronunciationFooter: String { text("pronunciationFooter") }
+
+    func notationName(_ system: PronunciationNotationSystem) -> String {
+        switch system {
+        case .ipa: text("notationIPA")
+        case .pinyin: text("notationPinyin")
+        case .revisedRomanization: text("notationRomanization")
+        }
+    }
+
     var learningModeTitle: String { text("learningModeTitle") }
     var voiceTitle: String { text("voiceTitle") }
     var systemDefaultTitle: String { text("systemDefaultTitle") }
     var voiceFooter: String { text("voiceFooter") }
+    var selectPremiumVoiceTitle: String { text("selectPremiumVoiceTitle") }
+    var noPremiumVoicesTitle: String { text("noPremiumVoicesTitle") }
+    var premiumVoiceTitle: String { text("premiumVoiceTitle") }
     var enhancedVoiceTitle: String { text("enhancedVoiceTitle") }
     var defaultVoiceTitle: String { text("defaultVoiceTitle") }
 

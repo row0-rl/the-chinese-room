@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+        F81000000000000000000001 = {isa = PBXBuildFile; fileRef = F81000000000000000000002; };
 		F70000000000000000000001 = {isa = PBXBuildFile; fileRef = F70000000000000000000002; };
 		F30000000000000000000002 = {isa = PBXBuildFile; fileRef = F20000000000000000000002; };
 		F30000000000000000000001 = {isa = PBXBuildFile; fileRef = F20000000000000000000001; };
@@ -37,6 +38,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+        F81000000000000000000002 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TheChineseRoom/Services/Pronunciation/ApplePinyinNotation.swift; sourceTree = SOURCE_ROOT; };
 		F70000000000000000000002 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleTranslationService.swift; sourceTree = "<group>"; };
 		F20000000000000000000002 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleMessageRuntime.swift; sourceTree = "<group>"; };
 		F20000000000000000000001 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeneratedMessage.swift; sourceTree = "<group>"; };
@@ -124,6 +126,7 @@
 			isa = PBXGroup;
 			children = (
 				C00000000000000000000003 /* LearningMessage.swift */,
+                F81000000000000000000002,
 				C00000000000000000000015 /* MessageSessionRecord.swift */,
 			);
 			path = Models;
@@ -277,6 +280,7 @@
 			files = (
 				D00000000000000000000002 /* AppConfiguration.swift in Sources */,
 				D00000000000000000000003 /* LearningMessage.swift in Sources */,
+                F81000000000000000000001,
 				D00000000000000000000004 /* MessageStore.swift in Sources */,
 				D00000000000000000000005 /* MessageService.swift in Sources */,
 				D00000000000000000000006 /* MockMessageService.swift in Sources */,

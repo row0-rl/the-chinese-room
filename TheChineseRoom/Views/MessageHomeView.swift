@@ -182,7 +182,11 @@ struct MessageHomeView: View {
     }
 
     private func messageCard(_ message: LearningMessage) -> some View {
-        MessageCard(message: message, appStrings: appStrings) {
+        MessageCard(
+            message: message,
+            appStrings: appStrings,
+            notationSystem: .fixedSystem(for: store.currentLanguageMode.target)
+        ) {
             Task { await store.speakCurrentMessage() }
         }
     }
@@ -508,7 +512,8 @@ private struct SettingsView: View {
         _source = State(initialValue: store.currentLanguageMode.source)
         _target = State(initialValue: store.currentLanguageMode.target)
         _selectedVoiceIdentifier = State(
-            initialValue: store.selectedVoiceIdentifier(for: store.currentLanguageMode)
+            initialValue: store.availableVoices(for: store.currentLanguageMode)
+                .first { $0.id == store.selectedVoiceIdentifier(for: store.currentLanguageMode) }?.id
         )
     }
 
@@ -538,14 +543,30 @@ private struct SettingsView: View {
                 }
 
                 Section {
-                    Picker(appStrings.voiceTitle, selection: $selectedVoiceIdentifier) {
-                        Text(appStrings.systemDefaultTitle).tag(String?.none)
-                        ForEach(voices) { voice in
-                            Text("\(voice.name) · \(voice.qualityDescription == "Enhanced" ? appStrings.enhancedVoiceTitle : appStrings.defaultVoiceTitle)")
-                                .tag(Optional(voice.id))
+                    LabeledContent(
+                        appStrings.notationSystemTitle,
+                        value: appStrings.notationName(.fixedSystem(for: target))
+                    )
+                } header: {
+                    Text("\(appStrings.languageName(target)) · \(appStrings.pronunciationTitle)")
+                } footer: {
+                    Text(PronunciationNotationSystem.fixedSystem(for: target) == .pinyin
+                        ? appStrings.pinyinFooter : appStrings.pronunciationFooter)
+                }
+
+                Section {
+                    if voices.isEmpty {
+                        Text(appStrings.noPremiumVoicesTitle)
+                    } else {
+                        Picker(appStrings.voiceTitle, selection: $selectedVoiceIdentifier) {
+                            Text(appStrings.selectPremiumVoiceTitle).tag(String?.none)
+                            ForEach(voices) { voice in
+                                Text("\(voice.name) · \(voice.qualityDescription == "Premium" ? appStrings.premiumVoiceTitle : (voice.qualityDescription == "Enhanced" ? appStrings.enhancedVoiceTitle : appStrings.defaultVoiceTitle))")
+                                    .tag(Optional(voice.id))
+                            }
                         }
+                        .pickerStyle(.navigationLink)
                     }
-                    .pickerStyle(.navigationLink)
                 } header: {
                     Text("\(appStrings.languageName(target)) · \(appStrings.voiceTitle)")
                 } footer: {
@@ -589,7 +610,7 @@ private struct SettingsView: View {
     }
 
     private func loadVoiceForEditedMode() {
-        selectedVoiceIdentifier = store.selectedVoiceIdentifier(for: editedMode)
+        selectedVoiceIdentifier = voices.first { $0.id == store.selectedVoiceIdentifier(for: editedMode) }?.id
     }
 }
 

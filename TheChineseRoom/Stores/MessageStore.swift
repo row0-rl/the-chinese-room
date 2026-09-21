@@ -78,6 +78,7 @@ final class MessageStore {
         SpeechVoiceStorage.save(voiceIdentifier, for: mode)
     }
 
+
     func previewVoice(_ voiceIdentifier: String?, for mode: LanguageMode) async {
         try? await speechService.speak(
             LanguageCatalog.speechPreview(for: mode.target),
