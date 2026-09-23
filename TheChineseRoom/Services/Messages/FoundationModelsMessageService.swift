@@ -4,15 +4,18 @@ import FoundationModels
 struct FoundationModelsMessageService: MessageService {
     private let runtime: AppleMessageRuntime
     private let translator: any TextTranslationService
+    private let pronunciationService: AppleJapanesePronunciationService
     private let onTranslationReady: ((String) async -> Void)?
 
     init(
         runtime: AppleMessageRuntime,
         translator: any TextTranslationService,
+        pronunciationService: AppleJapanesePronunciationService = .shared,
         onTranslationReady: ((String) async -> Void)? = nil
     ) {
         self.runtime = runtime
         self.translator = translator
+        self.pronunciationService = pronunciationService
         self.onTranslationReady = onTranslationReady
     }
 
@@ -75,6 +78,14 @@ struct FoundationModelsMessageService: MessageService {
             literalChunks: literalChunks,
             examples: examples
         )
+    }
+
+    func japanesePronunciation(
+        for text: String,
+        languageMode: LanguageMode
+    ) async -> [JapanesePronunciationUnit]? {
+        guard languageMode.target.id == LanguageCatalog.japaneseJapan.id else { return nil }
+        return await pronunciationService.pronunciation(for: text)
     }
 
     func generateValidAlignment(

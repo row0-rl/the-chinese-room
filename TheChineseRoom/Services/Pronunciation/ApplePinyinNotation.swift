@@ -16,12 +16,31 @@ struct PronunciationGroup: Identifiable {
 }
 
 enum PronunciationLayout {
-    static func units(text: String, system: PronunciationNotationSystem) -> [PronunciationUnit] {
-        // Keep Latin words (including contractions) together; other scripts use grapheme clusters.
-        let pattern = #"[\p{Latin}\p{M}\p{N}]+(?:['’\-][\p{Latin}\p{M}\p{N}]+)*|\X"#
+    static func units(
+        text: String,
+        system: PronunciationNotationSystem,
+        japanesePronunciation: [JapanesePronunciationUnit]? = nil
+    ) -> [PronunciationUnit] {
+        if system == .hepburnRomanization {
+            return JapaneseRomajiNotation.units(text: text, pronunciation: japanesePronunciation)
+        }
+        // Alphabetic IPA labels align by word. Chinese and Korean romanization
+        // labels align to individual grapheme clusters. Japanese returned above
+        // uses AFM-generated learner-facing word ranges.
+        let pattern = system == .ipa
+            ? #"[\p{L}\p{M}\p{N}]+(?:['’\-][\p{L}\p{M}\p{N}]+)*|\X"#
+            : #"[\p{Latin}\p{M}\p{N}]+(?:['’\-][\p{Latin}\p{M}\p{N}]+)*|\X"#
         let regex = try! NSRegularExpression(pattern: pattern)
         let source = text as NSString
-        let readings = system == .pinyin ? ApplePinyinNotation.generate(text: text)?.characters : nil
+        let readings: [Int: String]?
+        switch system {
+        case .pinyin:
+            readings = ApplePinyinNotation.generate(text: text)?.characters
+        case .revisedRomanization:
+            readings = KoreanRevisedRomanization.generate(text: text)?.characters
+        case .hepburnRomanization, .ipa:
+            readings = nil
+        }
         return regex.matches(in: text, range: NSRange(location: 0, length: source.length)).map { match in
             let value = source.substring(with: match.range)
             let hasHan = value.range(of: #"\p{Ideographic}"#, options: .regularExpression) != nil
@@ -30,6 +49,11 @@ enum PronunciationLayout {
             case .pinyin: needsNotation = hasHan
             case .revisedRomanization:
                 needsNotation = value.range(of: #"\p{Hangul}"#, options: .regularExpression) != nil
+            case .hepburnRomanization:
+                needsNotation = value.range(
+                    of: #"[\p{Hiragana}\p{Katakana}\p{Ideographic}]"#,
+                    options: .regularExpression
+                ) != nil
             case .ipa: needsNotation = value.contains { $0.isLetter || $0.isNumber }
             }
             return PronunciationUnit(range: match.range, text: value, needsNotation: needsNotation,

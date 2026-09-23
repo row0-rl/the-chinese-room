@@ -185,10 +185,14 @@ struct MessageHomeView: View {
         MessageCard(
             message: message,
             appStrings: appStrings,
-            notationSystem: .fixedSystem(for: store.currentLanguageMode.target)
-        ) {
+            notationSystem: .fixedSystem(for: store.currentLanguageMode.target),
+            onRequestPronunciation: {
+                store.ensurePronunciation(for: message.id)
+            },
+            onSpeak: {
             Task { await store.speakCurrentMessage() }
-        }
+            }
+        )
     }
 
     private var nextCard: some View {
@@ -503,6 +507,9 @@ private struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var source: LanguageProfile
     @State private var target: LanguageProfile
+    @State private var voicePreviewError: String?
+    @State private var voicePreviewTask: Task<Void, Never>?
+    @State private var isPreparingVoicePreview = false
     @State private var selectedVoiceIdentifier: String?
     let store: MessageStore
     private var appStrings: AppStrings { AppLocale.forLanguage(source).strings }
@@ -556,12 +563,12 @@ private struct SettingsView: View {
 
                 Section {
                     if voices.isEmpty {
-                        Text(appStrings.noPremiumVoicesTitle)
+                        Text(appStrings.speechUnavailableTitle)
                     } else {
                         Picker(appStrings.voiceTitle, selection: $selectedVoiceIdentifier) {
-                            Text(appStrings.selectPremiumVoiceTitle).tag(String?.none)
+                            Text(appStrings.systemDefaultTitle).tag(String?.none)
                             ForEach(voices) { voice in
-                                Text("\(voice.name) · \(voice.qualityDescription == "Premium" ? appStrings.premiumVoiceTitle : (voice.qualityDescription == "Enhanced" ? appStrings.enhancedVoiceTitle : appStrings.defaultVoiceTitle))")
+                                Text("\(voice.name) · \(voice.qualityDescription)")
                                     .tag(Optional(voice.id))
                             }
                         }
@@ -571,6 +578,10 @@ private struct SettingsView: View {
                     Text("\(appStrings.languageName(target)) · \(appStrings.voiceTitle)")
                 } footer: {
                     Text(appStrings.voiceFooter)
+                    if isPreparingVoicePreview { ProgressView() }
+                    if let voicePreviewError {
+                        Text(voicePreviewError).foregroundStyle(.red)
+                    }
                 }
             }
             .navigationTitle(appStrings.settingsTitle)
@@ -586,9 +597,25 @@ private struct SettingsView: View {
             }
             .onChange(of: selectedVoiceIdentifier) { oldValue, newValue in
                 guard oldValue != newValue else { return }
-                Task {
-                    await store.previewVoice(newValue, for: editedMode)
+                voicePreviewTask?.cancel()
+                voicePreviewError = nil
+                isPreparingVoicePreview = true
+                let mode = editedMode
+                voicePreviewTask = Task {
+                    defer { if !Task.isCancelled { isPreparingVoicePreview = false } }
+                    do {
+                        try await store.previewVoice(newValue, for: mode)
+                    } catch is CancellationError {
+                        return
+                    } catch {
+                        guard !Task.isCancelled else { return }
+                        voicePreviewError = error.localizedDescription
+                    }
                 }
+            }
+            .onDisappear {
+                voicePreviewTask?.cancel()
+                isPreparingVoicePreview = false
             }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {

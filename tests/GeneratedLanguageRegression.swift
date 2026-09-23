@@ -25,6 +25,25 @@ struct GeneratedLanguageRegression {
         check("我说“I am hungry”。", true) // Invented quotes are not exempt.
         check("I am hungry.", false, language: LanguageCatalog.englishUS)
         check("J’ai faim après le cours.", false, language: LanguageCatalog.frenchFrance)
+        check("Tengo hambre después de clase.", false, language: LanguageCatalog.spanishSpain)
+        check("Estou com fome depois da aula.", false, language: LanguageCatalog.portugueseBrazil)
+        check("Ho fame dopo la lezione.", false, language: LanguageCatalog.italianItaly)
+        check("授業の後、お腹が空きました。", false, language: LanguageCatalog.japaneseJapan)
+        check("После урока я голоден.", false, language: LanguageCatalog.russianRussia)
+        check("कक्षा के बाद मुझे भूख लगी है।", false, language: LanguageCatalog.hindiIndia)
+        check("Jag är hungrig efter lektionen.", false, language: LanguageCatalog.swedishSweden)
+        for language in [
+            LanguageCatalog.spanishSpain,
+            LanguageCatalog.portugueseBrazil,
+            LanguageCatalog.italianItaly,
+            LanguageCatalog.japaneseJapan,
+            LanguageCatalog.russianRussia,
+            LanguageCatalog.hindiIndia,
+            LanguageCatalog.swedishSweden
+        ] {
+            check("I am hungry after class.", true, language: language)
+        }
+        precondition(LanguageCatalog.supportedLanguages.count == 11)
 
         // Exact reported main/example content; isolate each offending field so an
         // earlier failure cannot mask a missed source-example validation.

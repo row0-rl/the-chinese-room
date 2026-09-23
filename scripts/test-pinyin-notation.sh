@@ -6,6 +6,8 @@ trap 'rm -rf "$TEST_DIR"' EXIT
 cd "$ROOT_DIR"
 xcrun swiftc \
   TheChineseRoom/Models/LearningMessage.swift \
+  TheChineseRoom/Services/Pronunciation/JapaneseRomajiNotation.swift \
+  TheChineseRoom/Services/Pronunciation/KoreanRevisedRomanization.swift \
   TheChineseRoom/Services/Pronunciation/ApplePinyinNotation.swift \
   tests/PinyinNotationRegression.swift -o "$TEST_DIR/check"
 "$TEST_DIR/check"

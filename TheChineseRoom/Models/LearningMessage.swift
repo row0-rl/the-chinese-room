@@ -8,6 +8,7 @@ struct LearningMessage: Identifiable, Equatable {
     let literalMeaning: String
     let literalChunks: [MessageLiteralChunk]
     let examples: [MessageExample]?
+    var japanesePronunciation: [JapanesePronunciationUnit]?
     var audioState: MessageAudioState
 
     init(
@@ -18,6 +19,7 @@ struct LearningMessage: Identifiable, Equatable {
         literalMeaning: String,
         literalChunks: [MessageLiteralChunk]? = nil,
         examples: [MessageExample]? = nil,
+        japanesePronunciation: [JapanesePronunciationUnit]? = nil,
         audioState: MessageAudioState = .notLoaded
     ) {
         self.id = id
@@ -27,8 +29,18 @@ struct LearningMessage: Identifiable, Equatable {
         self.literalMeaning = literalMeaning
         self.literalChunks = literalChunks ?? [MessageLiteralChunk(targetText: targetText, literalText: literalMeaning)]
         self.examples = examples
+        self.japanesePronunciation = japanesePronunciation
         self.audioState = audioState
     }
+}
+
+/// One source-preserving Japanese span and the katakana reading generated for it.
+/// Katakana is persisted so Hepburn formatting remains deterministic and can
+/// evolve without making another model request.
+struct JapanesePronunciationUnit: Equatable {
+    let surface: String
+    let katakanaReading: String
+    let isParticle: Bool
 }
 
 struct MessageLiteralChunk: Identifiable, Equatable {
@@ -85,11 +97,13 @@ enum PronunciationNotationSystem: String, Codable, CaseIterable {
     case ipa
     case pinyin
     case revisedRomanization
+    case hepburnRomanization
 
     static func fixedSystem(for language: LanguageProfile) -> Self {
         switch language.id {
         case LanguageCatalog.simplifiedChinese.id: .pinyin
         case LanguageCatalog.koreanHangul.id: .revisedRomanization
+        case LanguageCatalog.japaneseJapan.id: .hepburnRomanization
         default: .ipa
         }
     }
@@ -97,7 +111,7 @@ enum PronunciationNotationSystem: String, Codable, CaseIterable {
     var placeholder: String {
         switch self {
         case .ipa: "/…/"
-        case .pinyin, .revisedRomanization: "…"
+        case .pinyin, .revisedRomanization, .hepburnRomanization: "…"
         }
     }
 }
@@ -153,11 +167,74 @@ enum LanguageCatalog {
         localeIdentifier: "ko-KR"
     )
 
+    static let spanishSpain = LanguageProfile(
+        id: "spanish_spain",
+        displayName: "Spanish",
+        nativeName: "Español",
+        promptName: "Spanish as used in Spain",
+        localeIdentifier: "es-ES"
+    )
+
+    static let portugueseBrazil = LanguageProfile(
+        id: "portuguese_brazil",
+        displayName: "Portuguese",
+        nativeName: "Português",
+        promptName: "Brazilian Portuguese",
+        localeIdentifier: "pt-BR"
+    )
+
+    static let italianItaly = LanguageProfile(
+        id: "italian_italy",
+        displayName: "Italian",
+        nativeName: "Italiano",
+        promptName: "Italian as used in Italy",
+        localeIdentifier: "it-IT"
+    )
+
+    static let japaneseJapan = LanguageProfile(
+        id: "japanese_japan",
+        displayName: "Japanese",
+        nativeName: "日本語",
+        promptName: "Japanese as used in Japan",
+        localeIdentifier: "ja-JP"
+    )
+
+    static let russianRussia = LanguageProfile(
+        id: "russian_russia",
+        displayName: "Russian",
+        nativeName: "Русский",
+        promptName: "Russian as used in Russia",
+        localeIdentifier: "ru-RU"
+    )
+
+    static let hindiIndia = LanguageProfile(
+        id: "hindi_india",
+        displayName: "Hindi",
+        nativeName: "हिन्दी",
+        promptName: "Hindi as used in India",
+        localeIdentifier: "hi-IN"
+    )
+
+    static let swedishSweden = LanguageProfile(
+        id: "swedish_sweden",
+        displayName: "Swedish",
+        nativeName: "Svenska",
+        promptName: "Swedish as used in Sweden",
+        localeIdentifier: "sv-SE"
+    )
+
     static let supportedLanguages = [
         englishUS,
         frenchFrance,
         simplifiedChinese,
-        koreanHangul
+        koreanHangul,
+        spanishSpain,
+        portugueseBrazil,
+        italianItaly,
+        japaneseJapan,
+        russianRussia,
+        hindiIndia,
+        swedishSweden
     ]
 
     static func language(id: String) -> LanguageProfile? {
@@ -188,6 +265,20 @@ enum LanguageCatalog {
             examples = ["今天天气真好。", "我们来学点新东西吧。", "很高兴认识你。"]
         case koreanHangul.id:
             examples = ["오늘 정말 좋은 날이에요.", "새로운 것을 배워 봅시다.", "만나서 반가워요."]
+        case spanishSpain.id:
+            examples = ["Qué día tan bonito.", "Aprendamos algo nuevo.", "Encantado de conocerte."]
+        case portugueseBrazil.id:
+            examples = ["Que dia lindo.", "Vamos aprender algo novo.", "Prazer em conhecer você."]
+        case italianItaly.id:
+            examples = ["Che bella giornata.", "Impariamo qualcosa di nuovo.", "Piacere di conoscerti."]
+        case japaneseJapan.id:
+            examples = ["今日はいい天気ですね。", "新しいことを学びましょう。", "お会いできてうれしいです。"]
+        case russianRussia.id:
+            examples = ["Какой прекрасный день.", "Давайте узнаем что-нибудь новое.", "Приятно познакомиться."]
+        case hindiIndia.id:
+            examples = ["आज का दिन बहुत सुंदर है।", "आइए कुछ नया सीखें।", "आपसे मिलकर खुशी हुई।"]
+        case swedishSweden.id:
+            examples = ["Vilken vacker dag.", "Låt oss lära oss något nytt.", "Trevligt att träffas."]
         default:
             examples = [language.nativeName]
         }
@@ -298,6 +389,7 @@ struct AppStrings: Equatable {
         case .ipa: text("notationIPA")
         case .pinyin: text("notationPinyin")
         case .revisedRomanization: text("notationRomanization")
+        case .hepburnRomanization: text("notationHepburn")
         }
     }
 
@@ -305,11 +397,7 @@ struct AppStrings: Equatable {
     var voiceTitle: String { text("voiceTitle") }
     var systemDefaultTitle: String { text("systemDefaultTitle") }
     var voiceFooter: String { text("voiceFooter") }
-    var selectPremiumVoiceTitle: String { text("selectPremiumVoiceTitle") }
-    var noPremiumVoicesTitle: String { text("noPremiumVoicesTitle") }
-    var premiumVoiceTitle: String { text("premiumVoiceTitle") }
-    var enhancedVoiceTitle: String { text("enhancedVoiceTitle") }
-    var defaultVoiceTitle: String { text("defaultVoiceTitle") }
+    var speechUnavailableTitle: String { text("speechUnavailableTitle") }
 
     func languageName(_ language: LanguageProfile) -> String {
         Locale(identifier: localeIdentifier).localizedString(forIdentifier: language.localeIdentifier)

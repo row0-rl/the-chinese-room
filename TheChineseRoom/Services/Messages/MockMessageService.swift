@@ -7,6 +7,13 @@ struct MockMessageService: MessageService {
             case LanguageCatalog.simplifiedChinese.id: return "我饿了。"
             case LanguageCatalog.koreanHangul.id: return "배고파요."
             case LanguageCatalog.frenchFrance.id: return "J’ai faim."
+            case LanguageCatalog.spanishSpain.id: return "Tengo hambre."
+            case LanguageCatalog.portugueseBrazil.id: return "Estou com fome."
+            case LanguageCatalog.italianItaly.id: return "Ho fame."
+            case LanguageCatalog.japaneseJapan.id: return "お腹が空きました。"
+            case LanguageCatalog.russianRussia.id: return "Я голоден."
+            case LanguageCatalog.hindiIndia.id: return "मुझे भूख लगी है।"
+            case LanguageCatalog.swedishSweden.id: return "Jag är hungrig."
             default: return "I am hungry."
             }
         }

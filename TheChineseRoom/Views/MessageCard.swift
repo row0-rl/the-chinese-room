@@ -4,6 +4,7 @@ struct MessageCard: View {
     let message: LearningMessage
     let appStrings: AppStrings
     let notationSystem: PronunciationNotationSystem
+    let onRequestPronunciation: () -> Void
     let onSpeak: () -> Void
     @State private var showsLiteralChunks = false
     @State private var showsPronunciation = false
@@ -71,7 +72,9 @@ struct MessageCard: View {
 
     private var pronunciationToggleButton: some View {
         Button {
-            showsPronunciation.toggle()
+            let willShow = !showsPronunciation
+            showsPronunciation = willShow
+            if willShow { onRequestPronunciation() }
         } label: {
             Text("ə")
                 .font(.title3.weight(.semibold))
@@ -112,7 +115,11 @@ struct MessageCard: View {
     @ViewBuilder
     private var alignedChunks: some View {
         let units = showsPronunciation
-            ? PronunciationLayout.units(text: message.targetText, system: notationSystem) : []
+            ? PronunciationLayout.units(
+                text: message.targetText,
+                system: notationSystem,
+                japanesePronunciation: message.japanesePronunciation
+            ) : []
         let groups = PronunciationLayout.groups(text: message.targetText, units: units, chunks: message.literalChunks)
         if showsPronunciation && !showsLiteralChunks {
             pronunciationFlow(units)

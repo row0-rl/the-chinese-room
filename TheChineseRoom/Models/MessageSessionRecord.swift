@@ -40,6 +40,7 @@ private struct PersistedMessage: Codable {
     let literalMeaning: String
     let literalChunks: [PersistedLiteralChunk]
     let examples: [PersistedExample]?
+    let japanesePronunciation: [PersistedJapanesePronunciationUnit]?
 
     init(_ message: LearningMessage) {
         self.id = message.id
@@ -49,6 +50,7 @@ private struct PersistedMessage: Codable {
         self.literalMeaning = message.literalMeaning
         self.literalChunks = message.literalChunks.map(PersistedLiteralChunk.init)
         self.examples = message.examples?.map(PersistedExample.init)
+        self.japanesePronunciation = message.japanesePronunciation?.map(PersistedJapanesePronunciationUnit.init)
     }
 
     var learningMessage: LearningMessage {
@@ -60,7 +62,28 @@ private struct PersistedMessage: Codable {
             literalMeaning: literalMeaning,
             literalChunks: literalChunks.map(\.literalChunk),
             examples: examples?.map(\.example),
+            japanesePronunciation: japanesePronunciation?.map(\.pronunciationUnit),
             audioState: .notLoaded
+        )
+    }
+}
+
+private struct PersistedJapanesePronunciationUnit: Codable {
+    let surface: String
+    let katakanaReading: String
+    let isParticle: Bool
+
+    init(_ unit: JapanesePronunciationUnit) {
+        self.surface = unit.surface
+        self.katakanaReading = unit.katakanaReading
+        self.isParticle = unit.isParticle
+    }
+
+    var pronunciationUnit: JapanesePronunciationUnit {
+        JapanesePronunciationUnit(
+            surface: surface,
+            katakanaReading: katakanaReading,
+            isParticle: isParticle
         )
     }
 }

@@ -6,8 +6,19 @@
 	objectVersion = 70;
 	objects = {
 
+/* Begin XCRemoteSwiftPackageReference section */
+        F92000000000000000000003 = {isa = XCRemoteSwiftPackageReference; repositoryURL = "https://github.com/FluidInference/FluidAudio.git"; requirement = {kind = revision; revision = 5343241cd8a7576890e50925dec666bafc89d324; }; };
+/* End XCRemoteSwiftPackageReference section */
+/* Begin XCSwiftPackageProductDependency section */
+        F92000000000000000000002 = {isa = XCSwiftPackageProductDependency; package = F92000000000000000000003; productName = FluidAudio; };
+/* End XCSwiftPackageProductDependency section */
 /* Begin PBXBuildFile section */
+        F92000000000000000000006 = {isa = PBXBuildFile; fileRef = F92000000000000000000007; };
+        F92000000000000000000001 = {isa = PBXBuildFile; productRef = F92000000000000000000002; };
         F81000000000000000000001 = {isa = PBXBuildFile; fileRef = F81000000000000000000002; };
+        F81000000000000000000003 = {isa = PBXBuildFile; fileRef = F81000000000000000000004; };
+        F81000000000000000000005 = {isa = PBXBuildFile; fileRef = F81000000000000000000006; };
+		F94000000000000000000001 = {isa = PBXBuildFile; fileRef = F94000000000000000000002; };
 		F70000000000000000000001 = {isa = PBXBuildFile; fileRef = F70000000000000000000002; };
 		F30000000000000000000002 = {isa = PBXBuildFile; fileRef = F20000000000000000000002; };
 		F30000000000000000000001 = {isa = PBXBuildFile; fileRef = F20000000000000000000001; };
@@ -25,7 +36,7 @@
 		D00000000000000000000007 /* MessageGenerationPrompt.swift in Sources */ = {isa = PBXBuildFile; fileRef = C00000000000000000000007 /* MessageGenerationPrompt.swift */; };
 		D00000000000000000000009 /* FoundationModelsMessageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C00000000000000000000009 /* FoundationModelsMessageService.swift */; };
 		D0000000000000000000000A /* SpeechService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000000A /* SpeechService.swift */; };
-		D0000000000000000000000B /* SystemSpeechService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000000B /* SystemSpeechService.swift */; };
+		D0000000000000000000000B /* OnDeviceSpeechService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000000B /* OnDeviceSpeechService.swift */; };
 		D0000000000000000000000D /* Environment.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000000D /* Environment.swift */; };
 		D0000000000000000000000E /* MessageHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000000E /* MessageHomeView.swift */; };
 		D0000000000000000000000F /* MessageCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000000000000000000000F /* MessageCard.swift */; };
@@ -38,7 +49,11 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-        F81000000000000000000002 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TheChineseRoom/Services/Pronunciation/ApplePinyinNotation.swift; sourceTree = SOURCE_ROOT; };
+        F92000000000000000000007 = {isa = PBXFileReference; lastKnownFileType = folder; path = ThirdPartyNotices; sourceTree = SOURCE_ROOT; };
+        F81000000000000000000002 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplePinyinNotation.swift; sourceTree = "<group>"; };
+        F81000000000000000000004 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KoreanRevisedRomanization.swift; sourceTree = "<group>"; };
+        F81000000000000000000006 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JapaneseRomajiNotation.swift; sourceTree = "<group>"; };
+		F94000000000000000000002 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleJapanesePronunciationService.swift; sourceTree = "<group>"; };
 		F70000000000000000000002 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleTranslationService.swift; sourceTree = "<group>"; };
 		F20000000000000000000002 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleMessageRuntime.swift; sourceTree = "<group>"; };
 		F20000000000000000000001 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeneratedMessage.swift; sourceTree = "<group>"; };
@@ -57,7 +72,7 @@
 		C00000000000000000000007 /* MessageGenerationPrompt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageGenerationPrompt.swift; sourceTree = "<group>"; };
 		C00000000000000000000009 /* FoundationModelsMessageService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoundationModelsMessageService.swift; sourceTree = "<group>"; };
 		C0000000000000000000000A /* SpeechService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechService.swift; sourceTree = "<group>"; };
-		C0000000000000000000000B /* SystemSpeechService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemSpeechService.swift; sourceTree = "<group>"; };
+		C0000000000000000000000B /* OnDeviceSpeechService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnDeviceSpeechService.swift; sourceTree = "<group>"; };
 		C0000000000000000000000D /* Environment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Environment.swift; sourceTree = "<group>"; };
 		C0000000000000000000000E /* MessageHomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageHomeView.swift; sourceTree = "<group>"; };
 		C0000000000000000000000F /* MessageCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageCard.swift; sourceTree = "<group>"; };
@@ -74,6 +89,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+                F92000000000000000000001,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -126,7 +142,6 @@
 			isa = PBXGroup;
 			children = (
 				C00000000000000000000003 /* LearningMessage.swift */,
-                F81000000000000000000002,
 				C00000000000000000000015 /* MessageSessionRecord.swift */,
 			);
 			path = Models;
@@ -146,6 +161,7 @@
 			children = (
 				C00000000000000000000105 /* Messages */,
 				C00000000000000000000106 /* Speech */,
+				F94000000000000000000004 /* Pronunciation */,
 				C00000000000000000000109 /* Dictation */,
 			);
 			path = Services;
@@ -170,7 +186,7 @@
 			isa = PBXGroup;
 			children = (
 				C0000000000000000000000A /* SpeechService.swift */,
-				C0000000000000000000000B /* SystemSpeechService.swift */,
+				C0000000000000000000000B /* OnDeviceSpeechService.swift */,
 			);
 			path = Speech;
 			sourceTree = "<group>";
@@ -203,6 +219,17 @@
 			path = Dictation;
 			sourceTree = "<group>";
 		};
+		F94000000000000000000004 /* Pronunciation */ = {
+			isa = PBXGroup;
+			children = (
+				F81000000000000000000002,
+				F81000000000000000000004,
+				F81000000000000000000006,
+				F94000000000000000000002,
+			);
+			path = Pronunciation;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -218,7 +245,10 @@
 			);
 			dependencies = (
 			);
-			name = TheChineseRoom;
+			packageProductDependencies = (
+                F92000000000000000000002,
+            );
+            name = TheChineseRoom;
 			productName = TheChineseRoom;
 			productReference = A1B2C3D4E5F6000000000002 /* TheChineseRoom.app */;
 			productType = "com.apple.product-type.application";
@@ -252,7 +282,10 @@
 			mainGroup = A1B2C3D4E5F6000000000008;
 			minimizedProjectReferenceProxies = 1;
 			productRefGroup = A1B2C3D4E5F6000000000009 /* Products */;
-			projectDirPath = "";
+			packageReferences = (
+                F92000000000000000000003,
+            );
+            projectDirPath = "";
 			projectRoot = "";
 			targets = (
 				A1B2C3D4E5F6000000000001 /* TheChineseRoom */,
@@ -265,7 +298,8 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				E12000000000000000000001 /* Interface.xcstrings in Resources */,
+                F92000000000000000000006,
+                E12000000000000000000001 /* Interface.xcstrings in Resources */,
 				A1B2C3D4E5F6000000000013 /* Assets.xcassets in Resources */,
 				A1B2C3D4E5F6000000000014 /* Preview Content in Resources */,
 			);
@@ -281,6 +315,9 @@
 				D00000000000000000000002 /* AppConfiguration.swift in Sources */,
 				D00000000000000000000003 /* LearningMessage.swift in Sources */,
                 F81000000000000000000001,
+                F81000000000000000000003,
+                F81000000000000000000005,
+				F94000000000000000000001,
 				D00000000000000000000004 /* MessageStore.swift in Sources */,
 				D00000000000000000000005 /* MessageService.swift in Sources */,
 				D00000000000000000000006 /* MockMessageService.swift in Sources */,
@@ -291,7 +328,7 @@
 				F30000000000000000000002,
 				F30000000000000000000001,
 				D0000000000000000000000A /* SpeechService.swift in Sources */,
-				D0000000000000000000000B /* SystemSpeechService.swift in Sources */,
+				D0000000000000000000000B /* OnDeviceSpeechService.swift in Sources */,
 				D0000000000000000000000D /* Environment.swift in Sources */,
 				D0000000000000000000000E /* MessageHomeView.swift in Sources */,
 				D0000000000000000000000F /* MessageCard.swift in Sources */,

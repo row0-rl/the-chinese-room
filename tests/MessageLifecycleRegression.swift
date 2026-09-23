@@ -2,7 +2,7 @@ import Foundation
 import SwiftData
 
 // Replace hardware adapters only; exercise the production store and queue.
-typealias SystemSpeechService = SilentSpeechService
+typealias OnDeviceSpeechService = SilentSpeechService
 typealias SystemDictationService = UnavailableDictationService
 typealias FoundationModelsMessageService = MockMessageService
 extension MockMessageService { init(runtime: AppleMessageRuntime, translator: any TextTranslationService) { self.init() } }

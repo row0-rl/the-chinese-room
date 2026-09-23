@@ -40,7 +40,9 @@ enum GeneratedLanguageCheck {
             }
         }
         guard !expected.localeIdentifier.hasPrefix("en") else { return nil }
-        let asianSource = expected.localeIdentifier.hasPrefix("zh") || expected.localeIdentifier.hasPrefix("ko")
+        let asianSource = expected.localeIdentifier.hasPrefix("zh")
+            || expected.localeIdentifier.hasPrefix("ko")
+            || expected.localeIdentifier.hasPrefix("ja")
         for match in matches(#"[A-Za-z]+(?:[ '’-]+[A-Za-z]+)*"#, in: candidate) {
             guard let range = Range(match.range, in: candidate) else { continue }
             let run = String(candidate[range])
@@ -59,8 +61,7 @@ enum GeneratedLanguageCheck {
             let recognizer = NLLanguageRecognizer()
             recognizer.processString(run)
             let hypotheses = recognizer.languageHypotheses(withMaximum: 4)
-            let expectedLanguage: NLLanguage = expected.localeIdentifier.hasPrefix("fr") ? .french :
-                (expected.localeIdentifier.hasPrefix("ko") ? .korean : .simplifiedChinese)
+            let expectedLanguage = recognizedLanguage(for: expected)
             if hypotheses[.english, default: 0] >= 0.90,
                hypotheses[expectedLanguage, default: 0] < 0.10,
                ordinary.contains(where: { commonGlosses.contains($0.lowercased()) }) {
@@ -77,6 +78,22 @@ enum GeneratedLanguageCheck {
         "have", "has", "hungry", "hunger", "thirsty", "want", "need", "not", "very", "please",
         "with", "without", "would", "should", "cannot", "hello", "goodbye", "tense", "particle"
     ]
+
+    private static func recognizedLanguage(for profile: LanguageProfile) -> NLLanguage {
+        switch Locale.Language(identifier: profile.localeIdentifier).languageCode?.identifier {
+        case "en": .english
+        case "fr": .french
+        case "es": .spanish
+        case "pt": .portuguese
+        case "it": .italian
+        case "ja": .japanese
+        case "ko": .korean
+        case "ru": .russian
+        case "hi": .hindi
+        case "sv": .swedish
+        default: .simplifiedChinese
+        }
+    }
 
     private static func matches(_ pattern: String, in text: String) -> [NSTextCheckingResult] {
         guard let expression = try? NSRegularExpression(pattern: pattern) else { return [] }

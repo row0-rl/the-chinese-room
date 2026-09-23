@@ -29,6 +29,8 @@ final class MessageStore {
     private var preparedNextRandomSourceID: UUID?
     private var autoSpeechTask: Task<Void, Never>?
     private var lastAutoSpokenMessageID: UUID?
+    private var speechRequestID = UUID()
+    private var pronunciationRequests: Set<UUID> = []
 
     var currentMessage: LearningMessage {
         messages[currentIndex]
@@ -78,9 +80,29 @@ final class MessageStore {
         SpeechVoiceStorage.save(voiceIdentifier, for: mode)
     }
 
+    func ensurePronunciation(for messageID: UUID) {
+        guard currentLanguageMode.target.id == LanguageCatalog.japaneseJapan.id,
+              let index = messages.firstIndex(where: { $0.id == messageID }),
+              messages[index].japanesePronunciation == nil,
+              pronunciationRequests.insert(messageID).inserted else { return }
 
-    func previewVoice(_ voiceIdentifier: String?, for mode: LanguageMode) async {
-        try? await speechService.speak(
+        let text = messages[index].targetText
+        let languageMode = currentLanguageMode
+        Task { [weak self] in
+            guard let self else { return }
+            let pronunciation = await service.japanesePronunciation(for: text, languageMode: languageMode)
+            pronunciationRequests.remove(messageID)
+            guard currentLanguageMode == languageMode,
+                  let currentIndex = messages.firstIndex(where: { $0.id == messageID }),
+                  let pronunciation else { return }
+            messages[currentIndex].japanesePronunciation = pronunciation
+            saveCurrentSession()
+        }
+    }
+
+
+    func previewVoice(_ voiceIdentifier: String?, for mode: LanguageMode) async throws {
+        try await speechService.speak(
             LanguageCatalog.speechPreview(for: mode.target),
             localeIdentifier: mode.target.localeIdentifier,
             voiceIdentifier: voiceIdentifier
@@ -93,7 +115,7 @@ final class MessageStore {
         let messageService = FoundationModelsMessageService(runtime: AppleMessageRuntime(), translator: translator)
         self.service = messageService
         self.messageQueue = MessageQueueActor(service: messageService)
-        self.speechService = SystemSpeechService()
+        self.speechService = OnDeviceSpeechService()
         self.dictationService = SystemDictationService()
         self.persistsMessageHistory = configuration.persistsMessageHistory
         self.usesLocalMessages = false
@@ -340,9 +362,12 @@ final class MessageStore {
     private func speakCurrentMessage(isAutomatic: Bool) async {
         guard !usesLocalMessages else { return }
 
+        let requestID = UUID()
+        speechRequestID = requestID
+        let messageID = currentMessage.id
         isSpeaking = true
         updateCurrentAudioState(.loading)
-        defer { isSpeaking = false }
+        defer { if speechRequestID == requestID { isSpeaking = false } }
 
         do {
             try await speechService.speak(
@@ -350,6 +375,7 @@ final class MessageStore {
                 localeIdentifier: currentLanguageMode.target.localeIdentifier,
                 voiceIdentifier: selectedVoiceIdentifier(for: currentLanguageMode)
             )
+            guard speechRequestID == requestID, currentMessage.id == messageID else { return }
             updateCurrentAudioState(.ready)
         } catch is CancellationError {
             return
@@ -357,6 +383,7 @@ final class MessageStore {
             if isCancelledURLError(error) {
                 return
             }
+            guard speechRequestID == requestID, currentMessage.id == messageID else { return }
             updateCurrentAudioState(.failed(error.localizedDescription))
             logError(error, context: isAutomatic ? "Automatically speaking message" : "Speaking message")
         }

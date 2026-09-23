@@ -674,141 +674,25 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Choose a voice for the target language. Download additional voices in your device’s Accessibility settings."
+            "value": "Supertonic downloads on first use. Mandarin uses voices installed in iOS."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Choisissez une voix pour la langue cible. Téléchargez des voix supplémentaires dans les réglages d’accessibilité de votre appareil."
+            "value": "Supertonic est téléchargé à la première utilisation. Le mandarin utilise les voix installées dans iOS."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "选择目标语言的语音。可在设备的辅助功能设置中下载更多语音。"
+            "value": "Supertonic 会在首次使用时下载。普通话使用 iOS 中已安装的语音。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "학습할 언어의 음성을 선택하세요. 기기의 손쉬운 사용 설정에서 추가 음성을 다운로드할 수 있습니다."
-          }
-        }
-      }
-    },
-    "selectPremiumVoiceTitle": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Select a Premium voice"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Choisir une voix Premium"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "选择高品质语音"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "프리미엄 음성 선택"
-          }
-        }
-      }
-    },
-    "noPremiumVoicesTitle": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No Premium voices are installed for this language."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aucune voix Premium n’est installée pour cette langue."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "尚未安装此语言的高品质语音。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "이 언어에 설치된 프리미엄 음성이 없습니다."
-          }
-        }
-      }
-    },
-    "premiumVoiceTitle": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Premium"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Premium"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "高品质"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "프리미엄"
-          }
-        }
-      }
-    },
-    "enhancedVoiceTitle": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Enhanced"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Améliorée"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "增强"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "고품질"
+            "value": "Supertonic은 처음 사용할 때 다운로드됩니다. 중국어는 iOS에 설치된 음성을 사용합니다."
           }
         }
       }
@@ -935,54 +819,25 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "System Default"
+            "value": "Automatic voice"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Voix système par défaut"
+            "value": "Voix automatique"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "系统默认"
+            "value": "自动选择语音"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "시스템 기본값"
-          }
-        }
-      }
-    },
-    "defaultVoiceTitle": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Default"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Par défaut"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "默认"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "기본"
+            "value": "자동 음성 선택"
           }
         }
       }
@@ -1248,6 +1103,35 @@
         }
       }
     },
+    "notationHepburn": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hepburn romanization"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Romanisation Hepburn"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "赫本式罗马字"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "헵번식 로마자 표기법"
+          }
+        }
+      }
+    },
     "pronunciationUnavailable": {
       "extractionState": "manual",
       "localizations": {
@@ -1302,6 +1186,35 @@
           "stringUnit": {
             "state": "translated",
             "value": "Apple이 이 기기에서 병음으로 변환합니다. 여러 발음이 있는 한자는 잘못 표기될 수 있습니다."
+          }
+        }
+      }
+    },
+    "speechUnavailableTitle": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "On-device speech is unavailable for this language."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La synthèse vocale sur l’appareil n’est pas disponible dans cette langue."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暂不支持此语言的设备端语音。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 언어의 온디바이스 음성은 지원되지 않습니다."
           }
         }
       }

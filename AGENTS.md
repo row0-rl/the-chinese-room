@@ -6,10 +6,10 @@ The Chinese Room is an AI language learning iOS app. It allows users to learn an
 
 - SwiftUI
 - SwiftData
-- Apple on-device Foundation Models with guided generation
+- Apple Foundation Models with guided generation; Private Cloud Compute for contextual Japanese readings with an on-device fallback
 - Apple Translation for whole-expression translation
 - Apple Speech for on-device dictation
-- AVSpeechSynthesizer for system text-to-speech
+- Supertonic 3 via FluidAudio/Core ML for English, French, Korean, Spanish, Portuguese, Italian, Japanese, Russian, Hindi and Swedish text-to-speech; Apple system speech for Mandarin
 
 ## Features
 
@@ -41,8 +41,21 @@ The project targets iOS 27 and builds with Xcode 27. Message generation requires
 Apple Intelligence to be available and enabled, its system model downloaded, and
 both selected languages supported. Translation requires the corresponding Apple
 Translation language assets, with downloads handled by the app's translation task.
-No bundled model or external Swift package is required. Validate quality and
-latency on the target iPhone.
+Speech uses the pinned FluidAudio Swift package. English, French, Korean,
+Spanish, Portuguese, Italian, Japanese, Russian, Hindi and Swedish use the shared Supertonic 3
+INT4 Core ML model; Mandarin uses the installed Apple system speech voices.
+Supertonic assets download on first use and are cached for offline playback. No model setup script is required before
+building. See `docs/speech.md` for runtime limits and
+third-party notices. Validate quality, stability and latency on the target iPhone.
+
+Japanese Hepburn notation is generated lazily when the pronunciation button is
+opened. The model returns exact source spans and contextual katakana readings;
+the app validates and persists them, then converts katakana to Hepburn locally.
+Private Cloud Compute requires Apple's managed
+`com.apple.developer.private-cloud-compute` entitlement. The project must remain
+signable without that entitlement and fall back to the on-device system model.
+After Apple grants the entitlement, add it to the signing profile and define the
+`PRIVATE_CLOUD_COMPUTE` Swift compilation condition to enable the PCC path.
 
 ## Design
 
