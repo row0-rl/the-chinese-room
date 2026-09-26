@@ -13,6 +13,8 @@
         F92000000000000000000002 = {isa = XCSwiftPackageProductDependency; package = F92000000000000000000003; productName = FluidAudio; };
 /* End XCSwiftPackageProductDependency section */
 /* Begin PBXBuildFile section */
+		F96000000000000000000001 = {isa = PBXBuildFile; fileRef = F96000000000000000000002; };
+		F95000000000000000000001 = {isa = PBXBuildFile; fileRef = F95000000000000000000002; };
         F92000000000000000000006 = {isa = PBXBuildFile; fileRef = F92000000000000000000007; };
         F92000000000000000000001 = {isa = PBXBuildFile; productRef = F92000000000000000000002; };
         F81000000000000000000001 = {isa = PBXBuildFile; fileRef = F81000000000000000000002; };
@@ -49,6 +51,8 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		F96000000000000000000002 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IPANotation.swift; sourceTree = "<group>"; };
+		F95000000000000000000002 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleIPAPronunciationService.swift; sourceTree = "<group>"; };
         F92000000000000000000007 = {isa = PBXFileReference; lastKnownFileType = folder; path = ThirdPartyNotices; sourceTree = SOURCE_ROOT; };
         F81000000000000000000002 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplePinyinNotation.swift; sourceTree = "<group>"; };
         F81000000000000000000004 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KoreanRevisedRomanization.swift; sourceTree = "<group>"; };
@@ -226,6 +230,8 @@
 				F81000000000000000000004,
 				F81000000000000000000006,
 				F94000000000000000000002,
+				F96000000000000000000002,
+				F95000000000000000000002,
 			);
 			path = Pronunciation;
 			sourceTree = "<group>";
@@ -318,6 +324,8 @@
                 F81000000000000000000003,
                 F81000000000000000000005,
 				F94000000000000000000001,
+				F96000000000000000000001,
+				F95000000000000000000001,
 				D00000000000000000000004 /* MessageStore.swift in Sources */,
 				D00000000000000000000005 /* MessageService.swift in Sources */,
 				D00000000000000000000006 /* MockMessageService.swift in Sources */,

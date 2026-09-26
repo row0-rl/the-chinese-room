@@ -186,6 +186,8 @@ struct MessageHomeView: View {
             message: message,
             appStrings: appStrings,
             notationSystem: .fixedSystem(for: store.currentLanguageMode.target),
+            isLoadingPronunciation: store.isLoadingPronunciation(for: message.id),
+            pronunciationFailed: store.pronunciationFailed(for: message.id),
             onRequestPronunciation: {
                 store.ensurePronunciation(for: message.id)
             },

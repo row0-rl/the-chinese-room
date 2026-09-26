@@ -11,6 +11,16 @@ struct AppleMessageRuntime {
 }
 
 actor ControlledMessages: MessageService {
+    private var pendingIPA: CheckedContinuation<[IPAPronunciationUnit]?, Never>?
+    private(set) var ipaRequests = 0
+    func ipaPronunciation(for text: String, languageMode: LanguageMode) async -> [IPAPronunciationUnit]? {
+        ipaRequests += 1
+        return await withCheckedContinuation { pendingIPA = $0 }
+    }
+    func completeIPA(_ result: [IPAPronunciationUnit]?) {
+        pendingIPA?.resume(returning: result)
+        pendingIPA = nil
+    }
     private var pending: [Int: CheckedContinuation<LearningMessage, Error>] = [:]
     private(set) var count = 0
     private(set) var cancellations = 0
@@ -97,6 +107,38 @@ actor ControlledMessages: MessageService {
         for _ in 0..<100 { await Task.yield() }
         let backgroundCount = await background.count
         precondition(backgroundCount == 1)
+        // IPA is requested once, applied asynchronously, and reused on reopening.
+        let ipaService = ControlledMessages()
+        let ipaStore = MessageStore(service: ipaService)
+        let messageID = ipaStore.currentMessage.id
+        ipaStore.ensurePronunciation(for: messageID)
+        ipaStore.ensurePronunciation(for: messageID)
+        precondition(ipaStore.isLoadingPronunciation(for: messageID))
+        await waitUntil { await ipaService.ipaRequests == 1 }
+        await ipaService.completeIPA(nil)
+        await waitUntil { ipaStore.pronunciationFailed(for: messageID) }
+        precondition(!ipaStore.isLoadingPronunciation(for: messageID))
+        precondition(ipaStore.currentMessage.ipaPronunciation == nil)
+        ipaStore.ensurePronunciation(for: messageID)
+        precondition(!ipaStore.pronunciationFailed(for: messageID))
+        await waitUntil { await ipaService.ipaRequests == 2 }
+        let ipa = [IPAPronunciationUnit(surface: ipaStore.currentMessage.targetText, ipa: "tɛst")]
+        await ipaService.completeIPA(ipa)
+        await waitUntil { ipaStore.currentMessage.ipaPronunciation == ipa }
+        ipaStore.ensurePronunciation(for: messageID)
+        for _ in 0..<100 { await Task.yield() }
+        let ipaCount = await ipaService.ipaRequests
+        precondition(ipaCount == 2)
+
+        let record = MessageSessionRecord(modeID: LanguageMode.defaultMode.id, currentIndex: 0, messages: ipaStore.messages)
+        precondition(record.messages.first?.ipaPronunciation == ipa)
+        // Records written before IPA existed still decode, with no cached IPA.
+        var legacy = try JSONSerialization.jsonObject(with: record.messagesData) as! [[String: Any]]
+        legacy[0].removeValue(forKey: "ipaPronunciation")
+        record.messagesData = try JSONSerialization.data(withJSONObject: legacy)
+        precondition(record.messages.first?.id == messageID)
+        precondition(record.messages.first?.ipaPronunciation == nil)
+        print("PASS: IPA request deduplication, failure/retry, async application, caching, persistence, and legacy decoding")
         print("PASS: late reset, busy submission, cancellation recovery, swipe retry, and canceled prefetch")
     }
 }

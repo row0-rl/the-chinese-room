@@ -42,6 +42,24 @@ struct PinyinNotationRegression {
         precondition(mixedKorean.map(\.text).joined() == "🙂 한국어!")
         precondition(mixedKorean.first(where: { $0.text == "한" })?.range.location == 3)
         let frenchText = "C’est une bonne journée."
+        precondition(IPANotation.normalizedReading(" /fɛ̃/ \n") == "fɛ̃")
+        precondition(IPANotation.normalizedReading("[ˈhʌŋɡri]") == "ˈhʌŋɡri")
+        precondition(IPANotation.normalizedReading("The IPA is: /fɛ̃/") == nil)
+        precondition(IPANotation.normalizedReading("\n") == nil)
+        precondition(IPANotation.normalizedReading("日本語") == nil)
+        precondition(IPANotation.normalizedReading("/123/") == nil)
+        let ipaSource = "🙂 J’ai faim.\n"
+        let ipaSpans = IPANotation.spans(ipaSource)
+        precondition(ipaSpans == ["🙂", " ", "J’ai", " ", "faim", ".", "\n"])
+        let ipaReadings = ipaSpans.map {
+            IPAPronunciationUnit(surface: $0, ipa: $0 == "J’ai" ? "ʒe" : $0 == "faim" ? "fɛ̃" : "")
+        }
+        let ipaUnits = PronunciationLayout.units(text: ipaSource, system: .ipa, ipaPronunciation: ipaReadings)
+        precondition(ipaUnits.map(\.text).joined() == ipaSource)
+        precondition(ipaUnits.filter(\.needsNotation).map(\.notation) == ["/ʒe/", "/fɛ̃/"])
+        precondition(ipaUnits.first(where: { $0.text == "J’ai" })?.range.location == 3)
+        let staleIPA = PronunciationLayout.units(text: "bonjour", system: .ipa, ipaPronunciation: ipaReadings)
+        precondition(staleIPA.map(\.text).joined() == "bonjour" && staleIPA.allSatisfy { $0.notation == nil })
         let french = PronunciationLayout.units(text: frenchText, system: .ipa)
         precondition(french.filter(\.needsNotation).map(\.text) == ["C’est", "une", "bonne", "journée"])
         precondition(french.map(\.text).joined() == frenchText)

@@ -31,6 +31,15 @@ final class MessageStore {
     private var lastAutoSpokenMessageID: UUID?
     private var speechRequestID = UUID()
     private var pronunciationRequests: Set<UUID> = []
+    private var pronunciationFailures: Set<UUID> = []
+
+    func isLoadingPronunciation(for messageID: UUID) -> Bool {
+        pronunciationRequests.contains(messageID)
+    }
+
+    func pronunciationFailed(for messageID: UUID) -> Bool {
+        pronunciationFailures.contains(messageID)
+    }
 
     var currentMessage: LearningMessage {
         messages[currentIndex]
@@ -81,21 +90,38 @@ final class MessageStore {
     }
 
     func ensurePronunciation(for messageID: UUID) {
-        guard currentLanguageMode.target.id == LanguageCatalog.japaneseJapan.id,
-              let index = messages.firstIndex(where: { $0.id == messageID }),
-              messages[index].japanesePronunciation == nil,
-              pronunciationRequests.insert(messageID).inserted else { return }
+        guard let index = messages.firstIndex(where: { $0.id == messageID }) else { return }
+        let system = PronunciationNotationSystem.fixedSystem(for: currentLanguageMode.target)
+        switch system {
+        case .hepburnRomanization:
+            guard messages[index].japanesePronunciation == nil else { return }
+        case .ipa:
+            guard messages[index].ipaPronunciation == nil else { return }
+        default: return
+        }
+        guard pronunciationRequests.insert(messageID).inserted else { return }
+        pronunciationFailures.remove(messageID)
 
         let text = messages[index].targetText
         let languageMode = currentLanguageMode
         Task { [weak self] in
             guard let self else { return }
-            let pronunciation = await service.japanesePronunciation(for: text, languageMode: languageMode)
+            var japanese: [JapanesePronunciationUnit]?
+            var ipa: [IPAPronunciationUnit]?
+            if system == .ipa {
+                ipa = await service.ipaPronunciation(for: text, languageMode: languageMode)
+            } else {
+                japanese = await service.japanesePronunciation(for: text, languageMode: languageMode)
+            }
             pronunciationRequests.remove(messageID)
             guard currentLanguageMode == languageMode,
-                  let currentIndex = messages.firstIndex(where: { $0.id == messageID }),
-                  let pronunciation else { return }
-            messages[currentIndex].japanesePronunciation = pronunciation
+                  let currentIndex = messages.firstIndex(where: { $0.id == messageID }) else { return }
+            guard japanese != nil || ipa != nil else {
+                pronunciationFailures.insert(messageID)
+                return
+            }
+            if let japanese { messages[currentIndex].japanesePronunciation = japanese }
+            if let ipa { messages[currentIndex].ipaPronunciation = ipa }
             saveCurrentSession()
         }
     }

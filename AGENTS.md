@@ -6,7 +6,7 @@ The Chinese Room is an AI language learning iOS app. It allows users to learn an
 
 - SwiftUI
 - SwiftData
-- Apple Foundation Models with guided generation; Private Cloud Compute for contextual Japanese readings with an on-device fallback
+- Apple Foundation Models with guided generation; on-device text transformation for Japanese readings
 - Apple Translation for whole-expression translation
 - Apple Speech for on-device dictation
 - Supertonic 3 via FluidAudio/Core ML for English, French, Korean, Spanish, Portuguese, Italian, Japanese, Russian, Hindi and Swedish text-to-speech; Apple system speech for Mandarin
@@ -49,13 +49,21 @@ building. See `docs/speech.md` for runtime limits and
 third-party notices. Validate quality, stability and latency on the target iPhone.
 
 Japanese Hepburn notation is generated lazily when the pronunciation button is
-opened. The model returns exact source spans and contextual katakana readings;
-the app validates and persists them, then converts katakana to Hepburn locally.
-Private Cloud Compute requires Apple's managed
-`com.apple.developer.private-cloud-compute` entitlement. The project must remain
-signable without that entitlement and fall back to the on-device system model.
-After Apple grants the entitlement, add it to the signing profile and define the
-`PRIVATE_CLOUD_COMPUTE` Swift compilation condition to enable the PCC path.
+opened. The app preserves source spans using Apple's Japanese tokenizer, joining
+adjacent kanji and chunks ending in small tsu with their following syllable.
+The on-device Foundation Models service converts each kanji-containing span to
+kana with the full sentence as context, using plain-text permissive transformation
+mode. Kana-only spans are converted locally. Hiragana model output is normalized
+to katakana before validation and persistence; Hepburn conversion remains local.
+PCC is not used. Linguistic accuracy is still experimental; the live pronunciation
+smoke test checks rendering independently and reports reading-quality mismatches.
+
+IPA for English, French, Spanish, Portuguese, Italian, Russian, Hindi, and Swedish
+is generated lazily on-device when pronunciation is opened. The app fixes word
+spans locally, supplies the sentence and target locale to a plain-text Foundation
+Models transformation, normalizes IPA formatting, and persists the readings with
+the message. Model availability is required; successful output does not establish
+linguistic accuracy or official locale support. IPA accuracy remains experimental.
 
 ## Design
 

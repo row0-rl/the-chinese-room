@@ -9,6 +9,7 @@ struct LearningMessage: Identifiable, Equatable {
     let literalChunks: [MessageLiteralChunk]
     let examples: [MessageExample]?
     var japanesePronunciation: [JapanesePronunciationUnit]?
+    var ipaPronunciation: [IPAPronunciationUnit]?
     var audioState: MessageAudioState
 
     init(
@@ -20,6 +21,7 @@ struct LearningMessage: Identifiable, Equatable {
         literalChunks: [MessageLiteralChunk]? = nil,
         examples: [MessageExample]? = nil,
         japanesePronunciation: [JapanesePronunciationUnit]? = nil,
+        ipaPronunciation: [IPAPronunciationUnit]? = nil,
         audioState: MessageAudioState = .notLoaded
     ) {
         self.id = id
@@ -30,6 +32,7 @@ struct LearningMessage: Identifiable, Equatable {
         self.literalChunks = literalChunks ?? [MessageLiteralChunk(targetText: targetText, literalText: literalMeaning)]
         self.examples = examples
         self.japanesePronunciation = japanesePronunciation
+        self.ipaPronunciation = ipaPronunciation
         self.audioState = audioState
     }
 }
@@ -41,6 +44,12 @@ struct JapanesePronunciationUnit: Equatable {
     let surface: String
     let katakanaReading: String
     let isParticle: Bool
+}
+
+/// Ordered source spans with IPA without enclosing slashes. Formatting has an empty reading.
+struct IPAPronunciationUnit: Codable, Equatable {
+    let surface: String
+    let ipa: String
 }
 
 struct MessageLiteralChunk: Identifiable, Equatable {

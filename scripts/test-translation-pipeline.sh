@@ -6,7 +6,7 @@ trap 'rm -rf "$TEST_DIR"' EXIT
 cd "$ROOT_DIR"
 xcrun swiftc -target "$(uname -m)-apple-macos27.0" \
   TheChineseRoom/Models/LearningMessage.swift \
-  TheChineseRoom/Services/Pronunciation/AppleJapanesePronunciationService.swift \
+  TheChineseRoom/Services/Pronunciation/{AppleJapanesePronunciationService,AppleIPAPronunciationService,IPANotation,ApplePinyinNotation,JapaneseRomajiNotation,KoreanRevisedRomanization}.swift \
   TheChineseRoom/Services/Messages/{MessageService,AppleTranslationService,GeneratedMessage,GeneratedLanguageCheck,MessageGenerationPrompt,FoundationModelsMessageService}.swift \
   tests/TranslationPipelineRegression.swift -o "$TEST_DIR/check"
 "$TEST_DIR/check"

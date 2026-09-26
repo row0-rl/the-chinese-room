@@ -57,3 +57,33 @@ Checks full-expression Apple transliteration, chunk coverage, mixed Latin text,
 punctuation normalization, and safe failure for unconverted characters. These
 checks verify alignment; Apple can still choose an incorrect reading for a
 polyphonic character (for example, 行 in 银行).
+
+Live on-device Japanese pronunciation (requires macOS 27 and an available
+Apple Intelligence model):
+
+```sh
+bash scripts/test-japanese-pronunciation.sh
+```
+
+Runs 14 sentences through reading generation and the actual Hepburn layout.
+Fails on missing results, changed source text, invalid katakana, or Japanese
+spans without romanization. Covers compounds, particles, inflected verbs,
+counters, punctuation, whitespace, and emoji. Prints full readings and reports
+linguistic mismatches separately; `--strict-quality` makes those mismatches fail
+the run too. The default functional pass does not establish pronunciation
+accuracy or on-iPhone performance.
+
+Live on-device IPA generation (macOS 27 with an available Apple Intelligence model):
+
+```sh
+bash scripts/test-ipa-pronunciation.sh
+```
+
+Checks source preservation and nonempty IPA display for a sentence in each of the
+eight IPA languages. Prints generated readings and selected-word reference
+comparisons separately; a functional pass is not a pronunciation-quality pass.
+Some languages can return transformations despite not being advertised by
+`supportsLocale`; failures are handled as unavailable and can be retried.
+`test-pinyin-notation.sh` also checks IPA diacritics, formatting, Unicode offsets,
+and rejection of mismatched source annotations. `test-message-lifecycle.sh` covers
+IPA request deduplication, failure/retry, caching, persistence, and legacy records.

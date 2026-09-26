@@ -19,17 +19,18 @@ enum PronunciationLayout {
     static func units(
         text: String,
         system: PronunciationNotationSystem,
-        japanesePronunciation: [JapanesePronunciationUnit]? = nil
+        japanesePronunciation: [JapanesePronunciationUnit]? = nil,
+        ipaPronunciation: [IPAPronunciationUnit]? = nil
     ) -> [PronunciationUnit] {
         if system == .hepburnRomanization {
             return JapaneseRomajiNotation.units(text: text, pronunciation: japanesePronunciation)
         }
-        // Alphabetic IPA labels align by word. Chinese and Korean romanization
-        // labels align to individual grapheme clusters. Japanese returned above
-        // uses AFM-generated learner-facing word ranges.
-        let pattern = system == .ipa
-            ? #"[\p{L}\p{M}\p{N}]+(?:['’\-][\p{L}\p{M}\p{N}]+)*|\X"#
-            : #"[\p{Latin}\p{M}\p{N}]+(?:['’\-][\p{Latin}\p{M}\p{N}]+)*|\X"#
+        if system == .ipa {
+            return IPANotation.units(text: text, pronunciation: ipaPronunciation)
+        }
+        // IPA and Japanese word spans returned above. Chinese and Korean
+        // readings align to individual grapheme clusters.
+        let pattern = #"[\p{Latin}\p{M}\p{N}]+(?:['’\-][\p{Latin}\p{M}\p{N}]+)*|\X"#
         let regex = try! NSRegularExpression(pattern: pattern)
         let source = text as NSString
         let readings: [Int: String]?

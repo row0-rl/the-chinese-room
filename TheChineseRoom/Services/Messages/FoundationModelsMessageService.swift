@@ -88,6 +88,11 @@ struct FoundationModelsMessageService: MessageService {
         return await pronunciationService.pronunciation(for: text)
     }
 
+    func ipaPronunciation(for text: String, languageMode: LanguageMode) async -> [IPAPronunciationUnit]? {
+        guard PronunciationNotationSystem.fixedSystem(for: languageMode.target) == .ipa else { return nil }
+        return await AppleIPAPronunciationService.shared.pronunciation(for: text, language: languageMode.target)
+    }
+
     func generateValidAlignment(
         translation: GeneratedTranslation,
         languageMode: LanguageMode,

@@ -1,4 +1,5 @@
 protocol MessageService {
+    func ipaPronunciation(for text: String, languageMode: LanguageMode) async -> [IPAPronunciationUnit]?
     func randomMessage(
         after currentMessage: LearningMessage?,
         languageMode: LanguageMode,
@@ -12,6 +13,10 @@ protocol MessageService {
 }
 
 extension MessageService {
+    func ipaPronunciation(for text: String, languageMode: LanguageMode) async -> [IPAPronunciationUnit]? {
+        nil
+    }
+
     func japanesePronunciation(
         for text: String,
         languageMode: LanguageMode

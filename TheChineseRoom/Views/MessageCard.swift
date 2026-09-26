@@ -4,6 +4,8 @@ struct MessageCard: View {
     let message: LearningMessage
     let appStrings: AppStrings
     let notationSystem: PronunciationNotationSystem
+    let isLoadingPronunciation: Bool
+    let pronunciationFailed: Bool
     let onRequestPronunciation: () -> Void
     let onSpeak: () -> Void
     @State private var showsLiteralChunks = false
@@ -20,6 +22,11 @@ struct MessageCard: View {
                     alignedChunks
                 } else {
                     targetText
+                }
+                if showsPronunciation && pronunciationFailed {
+                    Text(appStrings.pronunciationUnavailable)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
             }
 
@@ -76,7 +83,13 @@ struct MessageCard: View {
             showsPronunciation = willShow
             if willShow { onRequestPronunciation() }
         } label: {
-            Text("ə")
+            Group {
+                if isLoadingPronunciation {
+                    ProgressView()
+                } else {
+                    Text("ə")
+                }
+            }
                 .font(.title3.weight(.semibold))
                 .frame(width: 44, height: 44)
                 .background(.black.opacity(showsPronunciation ? 0.14 : 0.08))
@@ -89,11 +102,11 @@ struct MessageCard: View {
     }
 
     private func pronunciationLabel(_ text: String?) -> some View {
-        let value = text ?? (notationSystem == .pinyin ? "—" : notationSystem.placeholder)
+        let value = text ?? (notationSystem == .pinyin || pronunciationFailed ? "—" : notationSystem.placeholder)
         return Text(value)
             .font(.caption)
             .foregroundStyle(.black.opacity(0.6))
-            .accessibilityLabel(text ?? (notationSystem == .pinyin
+            .accessibilityLabel(text ?? (notationSystem == .pinyin || pronunciationFailed
                 ? appStrings.pronunciationUnavailable : appStrings.pronunciationPlaceholder))
     }
 
@@ -118,7 +131,8 @@ struct MessageCard: View {
             ? PronunciationLayout.units(
                 text: message.targetText,
                 system: notationSystem,
-                japanesePronunciation: message.japanesePronunciation
+                japanesePronunciation: message.japanesePronunciation,
+                ipaPronunciation: message.ipaPronunciation
             ) : []
         let groups = PronunciationLayout.groups(text: message.targetText, units: units, chunks: message.literalChunks)
         if showsPronunciation && !showsLiteralChunks {

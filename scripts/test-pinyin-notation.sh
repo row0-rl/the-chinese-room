@@ -9,5 +9,6 @@ xcrun swiftc \
   TheChineseRoom/Services/Pronunciation/JapaneseRomajiNotation.swift \
   TheChineseRoom/Services/Pronunciation/KoreanRevisedRomanization.swift \
   TheChineseRoom/Services/Pronunciation/ApplePinyinNotation.swift \
+  TheChineseRoom/Services/Pronunciation/IPANotation.swift \
   tests/PinyinNotationRegression.swift -o "$TEST_DIR/check"
 "$TEST_DIR/check"
