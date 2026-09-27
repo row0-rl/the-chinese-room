@@ -9,6 +9,7 @@ struct MessageHomeView: View {
     @State private var showsSettings = false
     @State private var cardDragOffset: CGFloat = 0
     @State private var isPaging = false
+    @State private var cardHeights: [UUID: CGFloat] = [:]
     @FocusState private var isInputFocused: Bool
 
     var body: some View {
@@ -102,36 +103,55 @@ struct MessageHomeView: View {
         let previewReserve: CGFloat = 0
         let errorReserve: CGFloat = store.generationError == nil ? 0 : 92
         let reservedHeight = inputReserve + dictatedReserve + previewReserve + errorReserve + 8
-        return max(520, availableHeight - reservedHeight)
+        return max(0, availableHeight - reservedHeight)
     }
 
     private func cardStack(height: CGFloat) -> some View {
         GeometryReader { proxy in
             let viewportHeight = proxy.size.height
-            let peekHeight: CGFloat = 64
-            let cardHeight = max(300, min(380, viewportHeight - 120))
-            // A centered card leaves exactly peekHeight of each neighbor visible.
-            let pageStride = (viewportHeight + cardHeight) / 2 - peekHeight
+            let previousStride = abs(cardPosition(-1, viewportHeight: viewportHeight))
+            let nextStride = cardPosition(1, viewportHeight: viewportHeight)
+            let destination = cardDragOffset > 0 ? -1 : 1
+            let progress = min(1, abs(cardDragOffset) / max(1, destination == -1 ? previousStride : nextStride))
 
             ZStack {
-                if let previousMessage = store.previousCardMessage {
-                    MessageTitlePreview(title: previousMessage.normalizedSourceText, loadingLabel: appStrings.loadingMessageLabel, edge: .bottom)
-                        .frame(width: proxy.size.width, height: cardHeight)
-                        .offset(y: -pageStride + cardDragOffset)
-                        .allowsHitTesting(false)
-                        .accessibilityHidden(true)
+                ForEach(visibleCards, id: \.message.id) { card in
+                    let restingOffset = cardPosition(card.position, viewportHeight: viewportHeight)
+                    let destinationOffset = cardPosition(card.position, centeredAt: destination, viewportHeight: viewportHeight)
+                    let offset = restingOffset + (destinationOffset - restingOffset) * progress
+                    messageCard(
+                        card.message,
+                        revealProgress: card.position == 0 ? 1 - progress : (card.position == destination ? progress : 0),
+                        previewEdge: offset < 0 ? .bottom : .top
+                    )
+                    .frame(width: proxy.size.width)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .onGeometryChange(for: CGFloat.self) { geometry in
+                        geometry.size.height
+                    } action: { height in
+                        cardHeights[card.message.id] = height
+                    }
+                    .offset(y: offset)
+                    .allowsHitTesting(card.position == 0 && !isPaging)
+                    .accessibilityHidden(card.position != 0)
                 }
 
-                currentCard
-                    .frame(width: proxy.size.width, height: cardHeight)
-                    .offset(y: cardDragOffset)
-                    .allowsHitTesting(!isPaging)
+                if store.isShowingBlankCard {
+                    MessageSkeletonCard(loadingLabel: appStrings.loadingMessageLabel)
+                        .frame(width: proxy.size.width, height: 120)
+                        .offset(y: cardDragOffset)
+                }
 
-                nextCard
-                    .frame(width: proxy.size.width, height: cardHeight)
-                    .offset(y: pageStride + cardDragOffset)
-                    .allowsHitTesting(false)
-                    .accessibilityHidden(true)
+                ForEach(1...2, id: \.self) { position in
+                    if store.cardMessage(at: position) == nil {
+                        nextCard
+                            .frame(width: proxy.size.width, height: 120)
+                            .offset(y: cardPosition(position, viewportHeight: viewportHeight) * (1 - progress)
+                                + cardPosition(position, centeredAt: destination, viewportHeight: viewportHeight) * progress)
+                            .allowsHitTesting(false)
+                            .accessibilityHidden(true)
+                    }
+                }
             }
             .frame(width: proxy.size.width, height: viewportHeight)
             .contentShape(Rectangle())
@@ -146,21 +166,21 @@ struct MessageHomeView: View {
                         if translation > 0, store.previousCardMessage == nil {
                             cardDragOffset = min(40, translation * 0.15)
                         } else {
-                            cardDragOffset = min(pageStride, max(-pageStride, translation))
+                            cardDragOffset = min(previousStride, max(-nextStride, translation))
                         }
                     }
                     .onEnded { value in
                         guard !isPaging else { return }
                         let projectedOffset = value.predictedEndTranslation.height
                         let page: CardPagerPage
-                        if projectedOffset < -pageStride * 0.3 {
+                        if projectedOffset < -nextStride * 0.3 {
                             page = .next
-                        } else if projectedOffset > pageStride * 0.3, store.previousCardMessage != nil {
+                        } else if projectedOffset > previousStride * 0.3, store.previousCardMessage != nil {
                             page = .previous
                         } else {
                             page = .current
                         }
-                        settleCardPager(on: page, stride: pageStride)
+                        settleCardPager(on: page, stride: page == .previous ? previousStride : nextStride)
                     }
             )
         }
@@ -169,19 +189,41 @@ struct MessageHomeView: View {
         .clipped()
     }
 
-    private var currentCard: some View {
-        Group {
-            if store.isShowingBlankCard {
-                MessageSkeletonCard(loadingLabel: appStrings.loadingMessageLabel)
-                    .id("blank-\(store.currentMessage.id)")
-            } else {
-                messageCard(store.currentMessage)
-                    .id(store.currentMessage.id)
+    private func cardPosition(_ position: Int, centeredAt center: Int = 0, viewportHeight: CGFloat) -> CGFloat {
+        let relativePosition = position - center
+        guard relativePosition != 0 else { return 0 }
+        let direction = relativePosition > 0 ? 1 : -1
+        let firstNeighbor = center + direction
+        // Keep exactly 56 points of each adjacent preview inside the viewport,
+        // independent of the active card's content height.
+        var distance = viewportHeight / 2 + cardHeight(at: firstNeighbor) / 2 - 56
+        if abs(relativePosition) > 1 {
+            for step in 1..<abs(relativePosition) {
+                distance += cardHeight(at: center + step * direction) / 2
+                    + 12 + cardHeight(at: center + (step + 1) * direction) / 2
             }
+        }
+        return CGFloat(direction) * distance
+    }
+
+    private func cardHeight(at position: Int) -> CGFloat {
+        guard let message = store.cardMessage(at: position) else { return 120 }
+        return cardHeights[message.id] ?? 180
+    }
+
+    private var visibleCards: [(message: LearningMessage, position: Int)] {
+        (-2...2).compactMap { position in
+            guard !(position == 0 && store.isShowingBlankCard),
+                  let message = store.cardMessage(at: position) else { return nil }
+            return (message, position)
         }
     }
 
-    private func messageCard(_ message: LearningMessage) -> some View {
+    private func messageCard(
+        _ message: LearningMessage,
+        revealProgress: CGFloat,
+        previewEdge: VerticalEdge
+    ) -> some View {
         MessageCard(
             message: message,
             appStrings: appStrings,
@@ -193,12 +235,15 @@ struct MessageHomeView: View {
             },
             onSpeak: {
             Task { await store.speakCurrentMessage() }
-            }
+            },
+            isCurrentCard: message.id == store.currentMessage.id && !store.isShowingBlankCard,
+            revealProgress: revealProgress,
+            previewEdge: previewEdge
         )
     }
 
     private var nextCard: some View {
-        MessageTitlePreview(title: store.nextCardMessage?.normalizedSourceText, loadingLabel: store.isPreparingNextRandom || store.isGenerating ? appStrings.loadingMessageLabel : appStrings.nextMessageLabel, edge: .top)
+        MessageTitlePreview(title: nil, loadingLabel: store.isPreparingNextRandom || store.isGenerating ? appStrings.loadingMessageLabel : appStrings.nextMessageLabel, edge: .top)
     }
 
     private var cardStackFadeMask: some View {
@@ -396,8 +441,8 @@ struct MessageHomeView: View {
             case .next: cardDragOffset = -stride
             }
         } completion: {
-            // Reveal full content only after the title preview reaches the center.
-            // Swap atomically so preview and full titles never overlap.
+            // Rebase positions after the continuous reveal reaches its destination.
+            // Stable message IDs retain card state across this atomic rebase.
             var transaction = Transaction()
             transaction.disablesAnimations = true
             withTransaction(transaction) {

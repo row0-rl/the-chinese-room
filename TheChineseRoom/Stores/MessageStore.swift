@@ -51,11 +51,17 @@ final class MessageStore {
     }
 
     var nextCardMessage: LearningMessage? {
-        if currentIndex < messages.count - 1 {
-            return messages[currentIndex + 1]
-        }
+        cardMessage(at: 1)
+    }
 
-        guard preparedNextRandomSourceID == currentMessage.id else { return nil }
+    /// Includes the prepared message just beyond saved history so the pager can
+    /// draw both neighbors of the destination before the swipe completes.
+    func cardMessage(at relativePosition: Int) -> LearningMessage? {
+        let index = currentIndex + relativePosition
+        guard index >= 0 else { return nil }
+        if index < messages.count { return messages[index] }
+        guard index == messages.count,
+              preparedNextRandomSourceID == messages.last?.id else { return nil }
         return preparedNextRandomMessage
     }
 
