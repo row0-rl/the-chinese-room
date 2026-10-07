@@ -1,6 +1,9 @@
 import SwiftUI
+import UIKit
 
 struct MessageHomeView: View {
+    @Environment(\.scenePhase) private var scenePhase
+    @State private var dictationStartTask: Task<Void, Never>?
     let store: MessageStore
     let appStrings: AppStrings
     @State private var inputText = ""
@@ -9,6 +12,9 @@ struct MessageHomeView: View {
     @State private var showsSettings = false
     @State private var cardDragOffset: CGFloat = 0
     @State private var isPaging = false
+    @State private var cardDragHaptics = CardDragHaptics()
+    @State private var skipNextCardImpact = false
+    @GestureState private var isDraggingCard = false
     @State private var cardHeights: [UUID: CGFloat] = [:]
     @FocusState private var isInputFocused: Bool
 
@@ -21,8 +27,14 @@ struct MessageHomeView: View {
                 let cardViewportHeight = cardViewportHeight(in: proxy.size.height)
 
                 VStack(spacing: 0) {
-                    cardStack(height: cardViewportHeight)
-                        .padding(.horizontal, 20)
+                    Group {
+                        if let pending = store.pendingDictationText {
+                            pendingDictationCard(text: pending, height: cardViewportHeight)
+                        } else {
+                            cardStack(height: cardViewportHeight)
+                        }
+                    }
+                    .padding(.horizontal, 20)
 
                     Spacer(minLength: 8)
                     inputArea
@@ -37,8 +49,28 @@ struct MessageHomeView: View {
             settingsButton
         }
         .foregroundStyle(.black)
+        .onAppear { cardDragHaptics.prepare() }
+        .onChange(of: scenePhase) { _, phase in
+            if phase != .active { cardDragHaptics.stopRumble() }
+            if phase == .background { cancelHeldDictation() }
+        }
+        .onDisappear {
+            cardDragHaptics.stopRumble()
+            cancelHeldDictation()
+        }
+        .onChange(of: isDraggingCard) { _, dragging in
+            if !dragging && !isPaging { cardDragHaptics.stopRumble() }
+        }
+        .onChange(of: showsKeyboardInput || showsLanguageSelector || showsSettings) { _, presented in
+            if presented { cardDragHaptics.stopRumble() }
+        }
+        .onChange(of: store.generationError) { _, error in
+            if error != nil { skipNextCardImpact = false }
+        }
         .onChange(of: store.currentMessage.id) { _, _ in
-            Haptics.messageChanged()
+            cardDragHaptics.stopRumble()
+            if skipNextCardImpact { skipNextCardImpact = false }
+            else { Haptics.messageChanged() }
             recenterCardPager()
         }
         .onChange(of: store.isShowingBlankCard) { _, isShowingBlankCard in
@@ -61,7 +93,7 @@ struct MessageHomeView: View {
         HStack {
             if store.usesLocalMessages {
                 Text(appStrings.localTitle)
-                    .font(.caption.weight(.semibold))
+                    .appFont(.caption)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
                     .background(.black.opacity(0.08))
@@ -99,11 +131,51 @@ struct MessageHomeView: View {
 
     private func cardViewportHeight(in availableHeight: CGFloat) -> CGFloat {
         let inputReserve: CGFloat = showsKeyboardInput ? 118 : 96
-        let dictatedReserve: CGFloat = store.isDictating || store.isTranscribing || !store.dictatedText.isEmpty ? 58 : 0
         let previewReserve: CGFloat = 0
         let errorReserve: CGFloat = store.generationError == nil ? 0 : 92
-        let reservedHeight = inputReserve + dictatedReserve + previewReserve + errorReserve + 8
+        let reservedHeight = inputReserve + previewReserve + errorReserve + 8
         return max(0, availableHeight - reservedHeight)
+    }
+
+    private func pendingDictationCard(text: String, height: CGFloat) -> some View {
+        let seed = store.pendingDictationID
+        return ZStack(alignment: .top) {
+            MessageTitlePreview(title: store.currentMessage.normalizedSourceText,
+                loadingLabel: appStrings.loadingMessageLabel, edge: .bottom)
+                .frame(height: 56)
+            CappedCardScroll(maximumHeight: maximumCardHeight(in: height)) {
+                VStack(alignment: .leading, spacing: 22) {
+                    if text.isEmpty {
+                        RoundedRectangle(cornerRadius: 5)
+                            .fill(.black.opacity(0.1))
+                            .frame(width: 180, height: 24)
+                    } else {
+                        InkText(MessagePunctuation.clean(text))
+                            .appFont(.title3)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    VStack(alignment: .leading, spacing: 12) {
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(.black.opacity(0.1))
+                            .frame(height: 42)
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(.black.opacity(0.1))
+                            .frame(maxWidth: 180)
+                            .frame(height: 28)
+                    }
+                    .accessibilityLabel(appStrings.loadingMessageLabel)
+                }
+                .padding(PencilRectangle.contentInset)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .background { NotebookRules(seed: seed) }
+            .background(.white.opacity(0.5), in: PencilRectangleShape(seed: seed))
+            .clipShape(PencilRectangleShape(seed: seed))
+            .overlay(PencilRectangle(seed: seed))
+            .frame(height: height, alignment: .center)
+        }
+        .frame(height: height)
+        .clipped()
     }
 
     private func cardStack(height: CGFloat) -> some View {
@@ -122,7 +194,8 @@ struct MessageHomeView: View {
                     messageCard(
                         card.message,
                         revealProgress: card.position == 0 ? 1 - progress : (card.position == destination ? progress : 0),
-                        previewEdge: offset < 0 ? .bottom : .top
+                        previewEdge: offset < 0 ? .bottom : .top,
+                        maximumHeight: maximumCardHeight(in: viewportHeight)
                     )
                     .frame(width: proxy.size.width)
                     .fixedSize(horizontal: false, vertical: true)
@@ -157,10 +230,15 @@ struct MessageHomeView: View {
             .contentShape(Rectangle())
             .clipped()
             .mask(cardStackFadeMask)
-            .gesture(
+            .simultaneousGesture(
                 DragGesture(minimumDistance: 12)
+                    .updating($isDraggingCard) { value, dragging, _ in
+                        if !isPaging && !scrollsInsideCard(value.startLocation, viewportHeight: viewportHeight) {
+                            dragging = true
+                        }
+                    }
                     .onChanged { value in
-                        guard !isPaging else { return }
+                        guard !isPaging, !scrollsInsideCard(value.startLocation, viewportHeight: viewportHeight) else { return }
                         let translation = value.translation.height
                         // Resist dragging beyond the available history.
                         if translation > 0, store.previousCardMessage == nil {
@@ -168,9 +246,12 @@ struct MessageHomeView: View {
                         } else {
                             cardDragOffset = min(previousStride, max(-nextStride, translation))
                         }
+                        if cardDragOffset != 0 { cardDragHaptics.beginRumble() }
                     }
                     .onEnded { value in
-                        guard !isPaging else { return }
+                        guard !isPaging, !scrollsInsideCard(value.startLocation, viewportHeight: viewportHeight) else { return }
+                        cardDragHaptics.stopRumble()
+                        Haptics.messageChanged()
                         let projectedOffset = value.predictedEndTranslation.height
                         let page: CardPagerPage
                         if projectedOffset < -nextStride * 0.3 {
@@ -187,6 +268,16 @@ struct MessageHomeView: View {
         .frame(maxWidth: .infinity)
         .frame(height: height)
         .clipped()
+    }
+
+    private func maximumCardHeight(in viewportHeight: CGFloat) -> CGFloat {
+        min(520, max(1, viewportHeight - 136))
+    }
+
+    private func scrollsInsideCard(_ location: CGPoint, viewportHeight: CGFloat) -> Bool {
+        let height = cardHeight(at: 0)
+        let capped = height >= maximumCardHeight(in: viewportHeight) - 1
+        return capped && abs(location.y - viewportHeight / 2) <= height / 2
     }
 
     private func cardPosition(_ position: Int, centeredAt center: Int = 0, viewportHeight: CGFloat) -> CGFloat {
@@ -222,7 +313,8 @@ struct MessageHomeView: View {
     private func messageCard(
         _ message: LearningMessage,
         revealProgress: CGFloat,
-        previewEdge: VerticalEdge
+        previewEdge: VerticalEdge,
+        maximumHeight: CGFloat
     ) -> some View {
         MessageCard(
             message: message,
@@ -230,12 +322,16 @@ struct MessageHomeView: View {
             notationSystem: .fixedSystem(for: store.currentLanguageMode.target),
             isLoadingPronunciation: store.isLoadingPronunciation(for: message.id),
             pronunciationFailed: store.pronunciationFailed(for: message.id),
-            onRequestPronunciation: {
+            isLoadingHanja: store.isLoadingHanja(for: message.id),
+            hanjaFailed: store.hanjaFailed(for: message.id),
+            onRequestAnnotations: {
                 store.ensurePronunciation(for: message.id)
+                store.ensureHanja(for: message.id)
             },
             onSpeak: {
             Task { await store.speakCurrentMessage() }
             },
+            maximumHeight: maximumHeight,
             isCurrentCard: message.id == store.currentMessage.id && !store.isShowingBlankCard,
             revealProgress: revealProgress,
             previewEdge: previewEdge
@@ -291,11 +387,6 @@ struct MessageHomeView: View {
                 typedInputBar
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             } else {
-                if store.isDictating || store.isTranscribing || !store.dictatedText.isEmpty {
-                    dictatedTextPreview
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
-                }
-
                 inputBar
                     .transition(.opacity)
             }
@@ -304,7 +395,6 @@ struct MessageHomeView: View {
         .padding(.top, 12)
         .padding(.bottom, 14)
         .animation(.snappy(duration: 0.2), value: showsKeyboardInput)
-        .animation(.snappy(duration: 0.2), value: store.dictatedText)
     }
 
     private var keyboardDismissLayer: some View {
@@ -322,22 +412,10 @@ struct MessageHomeView: View {
         .ignoresSafeArea(edges: .top)
     }
 
-    private var dictatedTextPreview: some View {
-        Text(store.dictatedText.isEmpty ? appStrings.listeningLabel : store.dictatedText)
-            .font(.body.weight(.medium))
-            .multilineTextAlignment(.center)
-            .foregroundStyle(.black.opacity(store.dictatedText.isEmpty ? 0.55 : 0.85))
-            .lineLimit(3)
-            .frame(maxWidth: .infinity)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
-            .background(.white.opacity(0.58))
-            .clipShape(RoundedRectangle(cornerRadius: 8))
-    }
-
     private var typedInputBar: some View {
         HStack(spacing: 10) {
             TextField(appStrings.inputPlaceholder, text: $inputText, axis: .vertical)
+                .appFont(.body)
                 .textFieldStyle(.plain)
                 .lineLimit(1...3)
                 .focused($isInputFocused)
@@ -365,26 +443,30 @@ struct MessageHomeView: View {
 
             languageSelectorButton
 
-            Image(systemName: store.isDictating ? "stop.fill" : "mic.fill")
-                .font(.title2)
-                .frame(maxWidth: 260)
-                .frame(height: 48)
-                .background(store.isDictating ? .red : .black)
-                .foregroundStyle(Color.chineseRoomBackground)
-                .clipShape(Capsule())
-                .contentShape(Capsule())
-                    .accessibilityLabel(appStrings.holdToSpeakLabel)
-            .highPriorityGesture(
-                DragGesture(minimumDistance: 0)
-                    .onChanged { _ in
-                        guard !store.isDictating else { return }
-                        Haptics.dictationStarted()
-                        Task { await store.startDictation() }
+            DictationPressButton(
+                label: appStrings.holdToSpeakLabel,
+                enabled: !store.isGenerating && !store.isTranscribing,
+                foreground: UIColor(Color.chineseRoomBackground),
+                onPress: {
+                    cardDragHaptics.stopRumble()
+                    skipNextCardImpact = false
+                    dictationStartTask = Task {
+                        guard !Task.isCancelled else { return }
+                        await store.startDictation()
                     }
-                    .onEnded { _ in
+                },
+                onRelease: { cancelled in
+                    if cancelled || store.isStartingDictation || !store.isDictating {
+                        dictationStartTask?.cancel()
+                        store.cancelDictation()
+                    } else {
                         Task { await store.finishDictationAndSubmit() }
                     }
+                    dictationStartTask = nil
+                }
             )
+            .frame(maxWidth: 260)
+            .frame(height: 48)
 
             Button {
                 showsKeyboardInput.toggle()
@@ -404,8 +486,16 @@ struct MessageHomeView: View {
         .frame(height: 48)
     }
 
-    private func commitSettledCardPage(_ page: CardPagerPage) {
-        guard page != .current else { return }
+    private func cancelHeldDictation() {
+        dictationStartTask?.cancel()
+        dictationStartTask = nil
+        store.cancelDictation()
+    }
+
+    private func commitSettledCardPage(_ page: CardPagerPage) -> Bool {
+        guard page != .current else { return false }
+        let previousID = store.currentMessage.id
+        let wasBlank = store.isShowingBlankCard
 
         var shouldGenerateNextMessage = false
         var transaction = Transaction()
@@ -429,6 +519,7 @@ struct MessageHomeView: View {
         if shouldGenerateNextMessage {
             Task { await store.finishBlankNextMessage() }
         }
+        return store.currentMessage.id != previousID || (!wasBlank && store.isShowingBlankCard)
     }
 
     private func settleCardPager(on page: CardPagerPage, stride: CGFloat) {
@@ -441,13 +532,18 @@ struct MessageHomeView: View {
             case .next: cardDragOffset = -stride
             }
         } completion: {
+            cardDragHaptics.stopRumble()
             // Rebase positions after the continuous reveal reaches its destination.
             // Stable message IDs retain card state across this atomic rebase.
             var transaction = Transaction()
             transaction.disablesAnimations = true
             withTransaction(transaction) {
-                if store.currentMessage.id == sourceMessageID {
-                    commitSettledCardPage(page)
+                if store.currentMessage.id == sourceMessageID, scenePhase == .active {
+                    if commitSettledCardPage(page) {
+                        // The drag already fired its impact on finger release.
+                        // Suppress the arriving card's notification to avoid a second impact.
+                        skipNextCardImpact = true
+                    }
                 }
                 cardDragOffset = 0
                 isPaging = false
@@ -464,6 +560,8 @@ struct MessageHomeView: View {
     }
 
     private func submitInput() {
+        cardDragHaptics.stopRumble()
+        skipNextCardImpact = false
         let submittedText = inputText
         inputText = ""
         dismissKeyboardMode()
@@ -491,18 +589,18 @@ private struct MessageTitlePreview: View {
 
     var body: some View {
         Text(title ?? loadingLabel)
-            .font(.title3.weight(.semibold))
+            .appFont(.title3)
             .lineLimit(1)
             .foregroundStyle(.black.opacity(title == nil ? 0.45 : 1))
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(24)
+            .padding(PencilRectangle.contentInset)
             .frame(maxWidth: .infinity, maxHeight: .infinity,
                    alignment: edge == .top ? .topLeading : .bottomLeading)
-            .background(.white.opacity(0.5))
-            .clipShape(RoundedRectangle(cornerRadius: 8))
+            .background { NotebookRules(seed: PencilRectangle.placeholderSeed) }
+            .background(.white.opacity(0.5), in: PencilRectangleShape(seed: PencilRectangle.placeholderSeed))
+            .clipShape(PencilRectangleShape(seed: PencilRectangle.placeholderSeed))
             .overlay(
-                RoundedRectangle(cornerRadius: 8)
-                    .stroke(.black.opacity(0.08), lineWidth: 1)
+                PencilRectangle(seed: PencilRectangle.placeholderSeed)
             )
     }
 }
@@ -530,14 +628,14 @@ private struct MessageSkeletonCard: View {
                 skeletonBar(width: 230, height: 22)
             }
         }
-        .padding(24)
+        .padding(PencilRectangle.contentInset)
         .frame(maxWidth: .infinity, alignment: .leading)
         .frame(maxHeight: .infinity, alignment: .topLeading)
-        .background(.white.opacity(0.5))
-        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .background { NotebookRules(seed: PencilRectangle.placeholderSeed) }
+        .background(.white.opacity(0.5), in: PencilRectangleShape(seed: PencilRectangle.placeholderSeed))
+        .clipShape(PencilRectangleShape(seed: PencilRectangle.placeholderSeed))
         .overlay(
-            RoundedRectangle(cornerRadius: 8)
-                .stroke(.black.opacity(0.08), lineWidth: 1)
+            PencilRectangle(seed: PencilRectangle.placeholderSeed)
         )
         .redacted(reason: .placeholder)
         .accessibilityLabel(loadingLabel)
@@ -582,52 +680,65 @@ private struct SettingsView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section(appStrings.learningModeTitle) {
+                Section {
                     Picker(appStrings.originalLanguageTitle, selection: $source) {
                         ForEach(LanguageCatalog.supportedLanguages) { language in
-                            Text(appStrings.languageName(language)).tag(language)
+                            Text(appStrings.languageName(language)).appFont(.body).tag(language)
                         }
                     }
+                    .appFont(.body)
 
                     Picker(appStrings.targetLanguageTitle, selection: $target) {
                         ForEach(LanguageCatalog.supportedLanguages) { language in
-                            Text(appStrings.languageName(language)).tag(language)
+                            Text(appStrings.languageName(language)).appFont(.body).tag(language)
                         }
                     }
+                    .appFont(.body)
+                } header: {
+                    Text(appStrings.learningModeTitle).appFont(.footnote)
                 }
 
                 Section {
-                    LabeledContent(
-                        appStrings.notationSystemTitle,
-                        value: appStrings.notationName(.fixedSystem(for: target))
-                    )
+                    LabeledContent {
+                        Text(appStrings.notationName(.fixedSystem(for: target)))
+                            .appFont(.body)
+                    } label: {
+                        Text(appStrings.notationSystemTitle).appFont(.body)
+                    }
                 } header: {
                     Text("\(appStrings.languageName(target)) · \(appStrings.pronunciationTitle)")
+                        .appFont(.footnote)
                 } footer: {
                     Text(PronunciationNotationSystem.fixedSystem(for: target) == .pinyin
                         ? appStrings.pinyinFooter : appStrings.pronunciationFooter)
+                        .appFont(.footnote)
                 }
 
                 Section {
                     if voices.isEmpty {
                         Text(appStrings.speechUnavailableTitle)
+                            .appFont(.body)
                     } else {
                         Picker(appStrings.voiceTitle, selection: $selectedVoiceIdentifier) {
-                            Text(appStrings.systemDefaultTitle).tag(String?.none)
+                            Text(appStrings.systemDefaultTitle).appFont(.body).tag(String?.none)
                             ForEach(voices) { voice in
                                 Text("\(voice.name) · \(voice.qualityDescription)")
+                                    .appFont(.body)
                                     .tag(Optional(voice.id))
                             }
                         }
                         .pickerStyle(.navigationLink)
+                        .appFont(.body)
                     }
                 } header: {
                     Text("\(appStrings.languageName(target)) · \(appStrings.voiceTitle)")
+                        .appFont(.footnote)
                 } footer: {
                     Text(appStrings.voiceFooter)
+                        .appFont(.footnote)
                     if isPreparingVoicePreview { ProgressView() }
                     if let voicePreviewError {
-                        Text(voicePreviewError).foregroundStyle(.red)
+                        Text(voicePreviewError).appFont(.footnote).foregroundStyle(.red)
                     }
                 }
             }
@@ -669,6 +780,7 @@ private struct SettingsView: View {
                     Button(appStrings.cancelButtonTitle) {
                         dismiss()
                     }
+                    .appFont(.body)
                 }
 
                 ToolbarItem(placement: .confirmationAction) {
@@ -678,6 +790,7 @@ private struct SettingsView: View {
                         dismiss()
                     }
                     .disabled(source == target)
+                    .appFont(.body)
                 }
             }
         }
@@ -704,22 +817,30 @@ private struct LanguageSelectionView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section(appStrings.originalLanguageTitle) {
+                Section {
                     Picker(appStrings.originalLanguageTitle, selection: $source) {
                         ForEach(LanguageCatalog.supportedLanguages) { language in
                             Text(appStrings.languageName(language))
+                                .appFont(.body)
                                 .tag(language)
                         }
                     }
+                    .appFont(.body)
+                } header: {
+                    Text(appStrings.originalLanguageTitle).appFont(.footnote)
                 }
 
-                Section(appStrings.targetLanguageTitle) {
+                Section {
                     Picker(appStrings.targetLanguageTitle, selection: $target) {
                         ForEach(LanguageCatalog.supportedLanguages) { language in
                             Text(appStrings.languageName(language))
+                                .appFont(.body)
                                 .tag(language)
                         }
                     }
+                    .appFont(.body)
+                } header: {
+                    Text(appStrings.targetLanguageTitle).appFont(.footnote)
                 }
             }
             .navigationTitle(appStrings.languageSelectorTitle)
@@ -730,6 +851,7 @@ private struct LanguageSelectionView: View {
                     Button(appStrings.cancelButtonTitle) {
                         dismiss()
                     }
+                    .appFont(.body)
                 }
 
                 ToolbarItem(placement: .confirmationAction) {
@@ -738,8 +860,165 @@ private struct LanguageSelectionView: View {
                         dismiss()
                     }
                     .disabled(source == target)
+                    .appFont(.body)
                 }
             }
         }
+    }
+}
+
+/// Native touch tracking keeps press feedback independent of SwiftUI card layout
+/// and avoids using a drag recognizer to implement a stationary hold.
+private struct DictationPressButton: UIViewRepresentable {
+    @Environment(\.fontResolutionContext) private var fontContext
+    let label: String
+    let enabled: Bool
+    let foreground: UIColor
+    let onPress: () -> Void
+    let onRelease: (Bool) -> Void
+
+    func makeUIView(context: Context) -> DictationPressControl {
+        DictationPressControl()
+    }
+
+    func updateUIView(_ control: DictationPressControl, context: Context) {
+        control.accessibilityLabel = label
+        control.tintColor = foreground
+        control.setTitle(label, font: AppFont.withEastAsianFallback(
+            AppFont.text(.title3).resolve(in: fontContext).ctFont
+        ) as UIFont)
+        control.onPress = onPress
+        control.onRelease = onRelease
+        control.isEnabled = enabled
+        if !enabled { control.release(cancelled: true) }
+    }
+
+    static func dismantleUIView(_ control: DictationPressControl, coordinator: ()) {
+        control.release(cancelled: true)
+    }
+}
+
+private final class DictationPressControl: UIControl {
+    var onPress: (() -> Void)?
+    var onRelease: ((Bool) -> Void)?
+    private let icon = UIImageView()
+    private let titleLabel = UILabel()
+    private let microphoneImage = UIImage(named: "FuzzyMicrophone")?.withRenderingMode(.alwaysTemplate)
+    private let feedback = UIImpactFeedbackGenerator(style: .heavy)
+    private var held = false
+    private var pressID = UUID()
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        isAccessibilityElement = true
+        accessibilityTraits = .button
+        isMultipleTouchEnabled = false
+        backgroundColor = .black
+        icon.image = microphoneImage
+        icon.preferredSymbolConfiguration = UIImage.SymbolConfiguration(pointSize: 22, weight: .regular)
+        icon.contentMode = .scaleAspectFit
+        icon.isUserInteractionEnabled = false
+        titleLabel.numberOfLines = 1
+        titleLabel.adjustsFontSizeToFitWidth = true
+        titleLabel.minimumScaleFactor = 0.6
+        titleLabel.isUserInteractionEnabled = false
+        titleLabel.isAccessibilityElement = false
+        addSubview(titleLabel)
+        addSubview(icon)
+        NotificationCenter.default.addObserver(self, selector: #selector(backgrounded),
+            name: UIApplication.didEnterBackgroundNotification, object: nil)
+    }
+
+    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
+    func setTitle(_ title: String, font: UIFont) {
+        titleLabel.text = title
+        titleLabel.font = font
+        titleLabel.textColor = tintColor
+        invalidateIntrinsicContentSize()
+        setNeedsLayout()
+    }
+
+    override var intrinsicContentSize: CGSize {
+        CGSize(width: ceil(titleLabel.intrinsicContentSize.width) + 68, height: 48)
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        layer.cornerRadius = bounds.height / 2
+        let iconSize = min(28, max(0, bounds.height - 16))
+        let gap: CGFloat = 8
+        let titleWidth = min(ceil(titleLabel.intrinsicContentSize.width), max(0, bounds.width - 32 - gap - iconSize))
+        let startX = (bounds.width - titleWidth - gap - iconSize) / 2
+        titleLabel.frame = CGRect(x: startX, y: 0, width: titleWidth, height: bounds.height)
+        icon.frame = CGRect(x: startX + titleWidth + gap, y: (bounds.height - iconSize) / 2,
+                            width: iconSize, height: iconSize)
+    }
+
+    override func beginTracking(_ touch: UITouch, with event: UIEvent?) -> Bool {
+        guard isEnabled else { return false }
+        #if DEBUG
+        print("[Dictation touch] delivery=\(ProcessInfo.processInfo.systemUptime - touch.timestamp)s main=\(Thread.isMainThread)")
+        #endif
+        press()
+        return true
+    }
+
+    override func continueTracking(_ touch: UITouch, with event: UIEvent?) -> Bool {
+        if !bounds.insetBy(dx: -20, dy: -20).contains(touch.location(in: self)) {
+            release(cancelled: true)
+            return false
+        }
+        return true
+    }
+
+    override func endTracking(_ touch: UITouch?, with event: UIEvent?) {
+        release(cancelled: false)
+    }
+
+    override func cancelTracking(with event: UIEvent?) {
+        release(cancelled: true)
+    }
+
+    private func press() {
+        guard !held else { return }
+        held = true
+        let id = UUID()
+        pressID = id
+        // Update the native layer before scheduling any application work.
+        UIView.performWithoutAnimation {
+            backgroundColor = .systemRed
+            icon.image = UIImage(systemName: "stop.fill")
+        }
+        #if DEBUG
+        let changedAt = ProcessInfo.processInfo.systemUptime
+        #endif
+        DispatchQueue.main.async { [weak self] in
+            guard let self, self.held, self.pressID == id else { return }
+            #if DEBUG
+            print("[Dictation touch] native color set; start dispatch=\(ProcessInfo.processInfo.systemUptime - changedAt)s")
+            #endif
+            self.onPress?()
+            self.feedback.impactOccurred()
+        }
+    }
+
+    func release(cancelled: Bool) {
+        guard held else { return }
+        held = false
+        pressID = UUID()
+        UIView.performWithoutAnimation {
+            backgroundColor = .black
+            icon.image = microphoneImage
+        }
+        onRelease?(cancelled)
+    }
+
+    @objc private func backgrounded() { release(cancelled: true) }
+
+    override func accessibilityActivate() -> Bool {
+        guard isEnabled else { return false }
+        if held { release(cancelled: false) } else { press() }
+        return true
     }
 }

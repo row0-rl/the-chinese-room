@@ -3,7 +3,12 @@ protocol SpeechService: AnyObject {
     var isSpeechAudioEnabled: Bool { get }
     func availableVoices(localeIdentifier: String) -> [SpeechVoice]
     func prepareSpeechAudio(_ text: String, localeIdentifier: String) async throws
+    func stop()
     func speak(_ text: String, localeIdentifier: String, voiceIdentifier: String?) async throws
+}
+
+extension SpeechService {
+    func stop() {}
 }
 
 struct SpeechVoice: Identifiable, Hashable {

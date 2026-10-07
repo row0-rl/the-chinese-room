@@ -87,3 +87,49 @@ Some languages can return transformations despite not being advertised by
 `test-pinyin-notation.sh` also checks IPA diacritics, formatting, Unicode offsets,
 and rejection of mismatched source annotations. `test-message-lifecycle.sh` covers
 IPA request deduplication, failure/retry, caching, persistence, and legacy records.
+
+## Hanja annotations
+
+`bash scripts/test-message-lifecycle.sh` checks Hanja alignment, repeated spans,
+particle preservation, Unicode offsets, automatic startup and prefetch requests, request deduplication, retry, empty
+result caching, persistence, legacy records, and language-mode isolation.
+
+`bash scripts/test-hanja-generation.sh` runs 14 fixed Korean sentences through
+real on-device Foundation Models on the Mac. It requires an available system
+model and exits nonzero if any result misses the sample expectations. This is
+an explicit quality check, not a mocked generation test. See
+`HanjaGenerationResults.md` for the latest observed results and limitations.
+
+## Dictation startup
+
+Lifecycle regression coverage includes release during asynchronous startup,
+duplicate start events, stale completion after a new press, and cancellation
+before the startup task executes. The recording UI becomes ready only after
+`startRecording` returns; permission dialogs do not count as active recording.
+The live message card appears during startup, displays partial transcripts while
+holding, and keeps its ID through final transcription and generation. Empty or
+canceled recordings and failed startup remove the draft; late callbacks and
+canceled generation cannot restore it.
+
+The Debug launch argument `--dictation-smoke-test` performs three brief microphone
+startup/cancellation checks on a physical iPhone. It requires previously granted
+speech and microphone access, saves no recording, and does not assess transcription
+accuracy. On Cobble (iPhone 17 Pro), the 2026-09-28 run measured 0.179s, 0.155s,
+and 0.160s to engine readiness. All three cancellations left the engine stopped
+and the tap removed. These are post-change measurements, not a before/after comparison.
+
+The 2026-09-29 dictation executor check uses a dedicated dispatch serial executor
+for microphone and recognition lifecycle operations. Startup asserts it is not
+on the main thread. During three physical iPhone startups (0.184s, 0.160s,
+0.162s), a main-actor task scheduled every 10ms ran 16, 14, and 14 times.
+All cancellations stopped capture and removed the tap. This verifies main-actor
+availability during audio setup; it does not measure touch-to-first-red-frame
+latency or live transcription quality.
+
+The microphone press uses a native UIControl with begin/end/cancel tracking.
+Its red layer and icon are updated directly before dispatching app work, avoiding
+the former SwiftUI drag gesture and view-state redraw dependency. Dragging outside
+the control cancels, as do backgrounding and view removal; VoiceOver activation
+toggles the recording hold. Debug `[Dictation touch]` logs report event delivery
+age and delay until startup dispatch. These logs do not measure pixels appearing
+on screen. Actual finger-to-red latency still requires a physical interaction check.

@@ -48,8 +48,7 @@ Supertonic assets download on first use and are cached for offline playback. No 
 building. See `docs/speech.md` for runtime limits and
 third-party notices. Validate quality, stability and latency on the target iPhone.
 
-Japanese Hepburn notation is generated lazily when the pronunciation button is
-opened. The app preserves source spans using Apple's Japanese tokenizer, joining
+Japanese Hepburn notation is generated automatically when a message is prepared. The app preserves source spans using Apple's Japanese tokenizer, joining
 adjacent kanji and chunks ending in small tsu with their following syllable.
 The on-device Foundation Models service converts each kanji-containing span to
 kana with the full sentence as context, using plain-text permissive transformation
@@ -68,3 +67,23 @@ linguistic accuracy or official locale support. IPA accuracy remains experimenta
 ## Design
 
 Main background color is light beige. Text is black.
+
+### Hanja annotations
+
+For Chinese speakers learning Korean, preparing a message starts a separate,
+on-device Foundation Models request. The AI transforms only Sino-Korean spans
+into Hanja; local validation requires an exact character correspondence and
+preserves particles, spacing, and punctuation. The app stores UTF-16 source
+offsets and caches successful results, including empty results, with each message.
+Failed requests can be retried by hiding and showing annotations. No dictionary
+is used. Structural validation cannot verify etymological correctness; see
+`tests/HanjaGenerationResults.md` for live model limitations.
+
+Pronunciation and Hanja requests start automatically for loaded history, newly generated messages, and prefetched cards. Tapping only reveals cached results or retries failures.
+
+Sentence-ending full stops are removed locally before translation/segmentation and when restoring cards. Questions, exclamations, ellipses, initials, dotted abbreviations, and common abbreviated titles are preserved. Abbreviation detection is conservative and heuristic.
+
+Dictation has a main-actor UI adapter and a worker actor backed by an explicit
+serial DispatchQueue executor. Audio-session configuration, engine lifecycle,
+and recognition callbacks run on the worker; only transcript/status delivery
+returns to the main actor. Button press color follows touch state independently.

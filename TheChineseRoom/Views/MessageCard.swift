@@ -6,75 +6,85 @@ struct MessageCard: View {
     let notationSystem: PronunciationNotationSystem
     let isLoadingPronunciation: Bool
     let pronunciationFailed: Bool
-    let onRequestPronunciation: () -> Void
+    let isLoadingHanja: Bool
+    let hanjaFailed: Bool
+    let onRequestAnnotations: () -> Void
     let onSpeak: () -> Void
+    var maximumHeight: CGFloat = 520
     var isCurrentCard = true
     var revealProgress: CGFloat = 1
     var previewEdge: VerticalEdge = .top
     @State private var showsAnnotations = false
 
     var body: some View {
-        MessageCardRevealLayout(progress: revealProgress, edge: previewEdge) {
-            Text(message.normalizedSourceText)
-                .font(.title3.weight(.semibold))
-                .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: .infinity, alignment: .leading)
+        CappedCardScroll(maximumHeight: maximumHeight, resetScroll: !isCurrentCard) {
+            MessageCardRevealLayout(progress: revealProgress, edge: previewEdge, visibleHeight: max(0, maximumHeight - PencilRectangle.contentInset * 2)) {
+                InkText(message.normalizedSourceText)
+                    .appFont(.title3)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
 
-            VStack(alignment: .leading, spacing: 22) {
-                VStack(alignment: .leading, spacing: 14) {
-                    if showsAnnotations {
-                        alignedChunks
-                    } else {
-                        targetText
-                    }
-                    if showsAnnotations && isLoadingPronunciation {
-                        ProgressView()
-                    }
-                    if showsAnnotations && pronunciationFailed {
-                        Text(appStrings.pronunciationUnavailable)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    toggleAnnotationsAndPlay()
-                }
-                .accessibilityElement(children: .combine)
-                .accessibilityAddTraits(.isButton)
-                .accessibilityAction {
-                    toggleAnnotationsAndPlay()
-                }
-
-                if let examples = message.examples, !examples.isEmpty {
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text(appStrings.examplesTitle)
-                            .font(.headline)
-                        ForEach(examples) { example in
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(example.sourceText)
-                                    .font(.subheadline)
-                                Text(example.targetText)
-                                    .font(.subheadline.weight(.semibold))
-                            }
-                            .frame(maxWidth: .infinity, alignment: .leading)
+                VStack(alignment: .leading, spacing: 22) {
+                    VStack(alignment: .leading, spacing: 14) {
+                        if showsAnnotations {
+                            alignedChunks
+                        } else {
+                            targetText
+                        }
+                        if showsAnnotations && (isLoadingPronunciation || isLoadingHanja) {
+                            ProgressView()
+                        }
+                        if showsAnnotations && hanjaFailed {
+                            InkText(appStrings.hanjaUnavailable)
+                                .appFont(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        if showsAnnotations && pronunciationFailed {
+                            InkText(appStrings.pronunciationUnavailable)
+                                .appFont(.caption)
+                                .foregroundStyle(.secondary)
                         }
                     }
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        toggleAnnotationsAndPlay()
+                    }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityAddTraits(.isButton)
+                    .accessibilityAction {
+                        toggleAnnotationsAndPlay()
+                    }
+
+                    if let examples = message.examples, !examples.isEmpty {
+                        VStack(alignment: .leading, spacing: 12) {
+                            InkText(appStrings.examplesTitle)
+                                .appFont(.headline)
+                            ForEach(examples) { example in
+                                VStack(alignment: .leading, spacing: 4) {
+                                    InkText(example.sourceText)
+                                        .appFont(.subheadline)
+                                    InkText(example.targetText)
+                                        .appFont(.subheadline)
+                                }
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                        }
+                    }
+
                 }
+                .frame(maxWidth: .infinity, alignment: .topLeading)
+                .clipped()
+                .opacity(Double(revealProgress * revealProgress))
 
             }
+            .padding(PencilRectangle.contentInset)
             .frame(maxWidth: .infinity, alignment: .topLeading)
-            .clipped()
-            .opacity(Double(revealProgress * revealProgress))
-
         }
-        .padding(24)
-        .frame(maxWidth: .infinity, alignment: .topLeading)
-        .background(.white.opacity(0.5))
-        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .background { NotebookRules(seed: message.id) }
+        .background(.white.opacity(0.5), in: PencilRectangleShape(seed: message.id))
+        .clipShape(PencilRectangleShape(seed: message.id))
         .overlay(
-            RoundedRectangle(cornerRadius: 8)
-                .stroke(.black.opacity(0.08), lineWidth: 1)
+            PencilRectangle(seed: message.id)
         )
         .clipped()
         .onChange(of: isCurrentCard) { _, isCurrent in
@@ -86,15 +96,15 @@ struct MessageCard: View {
 
     private func toggleAnnotationsAndPlay() {
         showsAnnotations.toggle()
-        if showsAnnotations { onRequestPronunciation() }
+        if showsAnnotations { onRequestAnnotations() }
         onSpeak()
     }
 
     private func pronunciationLabel(_ text: String?) -> some View {
         let value = text ?? (notationSystem == .pinyin || pronunciationFailed ? "—" : notationSystem.placeholder)
-        return Text(value)
-            .font(.caption)
-            .foregroundStyle(.black.opacity(0.6))
+        return InkText(value)
+            .appFont(.caption)
+            .foregroundStyle(.black)
             .accessibilityLabel(text ?? (notationSystem == .pinyin || pronunciationFailed
                 ? appStrings.pronunciationUnavailable : appStrings.pronunciationPlaceholder))
     }
@@ -111,9 +121,10 @@ struct MessageCard: View {
         if message.literalChunks.isEmpty {
             VStack(alignment: .leading, spacing: 12) {
                 pronunciationFlow(units)
-                Text(appStrings.literalUnavailable)
-                    .font(.body)
-                    .foregroundStyle(.black.opacity(0.7))
+                hanjaLabels(for: units)
+                InkText(appStrings.literalUnavailable)
+                    .appFont(.body)
+                    .foregroundStyle(.black)
             }
         } else if let groups {
             FlowLayout(spacing: 8, lineSpacing: 12) {
@@ -124,11 +135,12 @@ struct MessageCard: View {
                                 pronunciationUnit(unit)
                             }
                         }
+                        hanjaLabels(for: group.units)
                         HStack(alignment: .top, spacing: 8) {
                             ForEach(group.chunks) { chunk in
-                                Text(chunk.literalText)
-                                    .font(.subheadline)
-                                    .foregroundStyle(.black.opacity(0.7))
+                                InkText(chunk.literalText)
+                                    .appFont(.subheadline)
+                                    .foregroundStyle(.black)
                                     .multilineTextAlignment(.center)
                             }
                         }
@@ -144,14 +156,15 @@ struct MessageCard: View {
                 // If legacy chunk formatting cannot be mapped, keep pronunciation aligned
                 // to the whole sentence instead of assigning it to the wrong literal chunk.
                 pronunciationFlow(units)
+                hanjaLabels(for: units)
                 FlowLayout(spacing: 8, lineSpacing: 12) {
                     ForEach(message.literalChunks) { chunk in
                         VStack(spacing: 3) {
-                            Text(chunk.targetText)
-                                .font(.custom("ChalkboardSE-Bold", size: annotationFontSize))
-                            Text(chunk.literalText)
-                                .font(.subheadline)
-                                .foregroundStyle(.black.opacity(0.7))
+                            InkText(chunk.targetText)
+                                .appExpressionFont(size: annotationFontSize)
+                            InkText(chunk.literalText)
+                                .appFont(.subheadline)
+                                .foregroundStyle(.black)
                                 .multilineTextAlignment(.center)
                         }
                         .padding(.horizontal, 4)
@@ -161,6 +174,18 @@ struct MessageCard: View {
                     }
                 }
             }
+        }
+    }
+
+    private func hanjaLabels(for units: [PronunciationUnit]) -> some View {
+        let start = units.first?.range.location ?? 0
+        let end = units.last.map { NSMaxRange($0.range) } ?? 0
+        let annotations = (message.hanjaAnnotations ?? []).filter { $0.offset >= start && $0.offset < end }
+        return ForEach(annotations) { annotation in
+            InkText("\(annotation.surface) · \(annotation.hanja)")
+                .appFont(.caption)
+                .foregroundStyle(.black)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 
@@ -177,17 +202,17 @@ struct MessageCard: View {
             if unit.needsNotation {
                 pronunciationLabel(unit.notation)
             } else {
-                Text(" ").font(.caption).accessibilityHidden(true)
+                InkText(" ").appFont(.caption).accessibilityHidden(true)
             }
-            Text(unit.text)
-                .font(.custom("ChalkboardSE-Bold", size: annotationFontSize))
+            InkText(unit.text)
+                .appExpressionFont(size: annotationFontSize)
         }
         .fixedSize()
     }
 
     private var targetText: some View {
-        Text(message.targetText)
-            .font(.custom("ChalkboardSE-Bold", size: targetFontSize))
+        InkText(message.targetText)
+            .appExpressionFont(size: targetFontSize)
             .fixedSize(horizontal: false, vertical: true)
             .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -280,6 +305,7 @@ private struct FlowLayout: Layout {
 private struct MessageCardRevealLayout: Layout {
     var progress: CGFloat
     let edge: VerticalEdge
+    let visibleHeight: CGFloat
 
     var animatableData: CGFloat {
         get { progress }
@@ -297,7 +323,7 @@ private struct MessageCardRevealLayout: Layout {
         guard subviews.count == 2 else { return }
         let titleSize = subviews[0].sizeThatFits(ProposedViewSize(width: bounds.width, height: nil))
         let progress = min(1, max(0, progress))
-        let previewOffset = edge == .bottom ? max(0, bounds.height - titleSize.height) : 0
+        let previewOffset = edge == .bottom ? max(0, min(bounds.height, visibleHeight) - titleSize.height) : 0
         subviews[0].place(
             at: CGPoint(x: bounds.minX, y: bounds.minY + previewOffset * (1 - progress)),
             proposal: ProposedViewSize(titleSize)
@@ -307,5 +333,30 @@ private struct MessageCardRevealLayout: Layout {
             at: CGPoint(x: bounds.minX, y: contentTop),
             proposal: ProposedViewSize(width: bounds.width, height: max(0, bounds.maxY - contentTop))
         )
+    }
+}
+
+/// Measures intrinsic content height so short cards stay compact. Only overflow scrolls.
+struct CappedCardScroll<Content: View>: View {
+    let maximumHeight: CGFloat
+    var resetScroll = false
+    @ViewBuilder let content: () -> Content
+    @State private var contentHeight: CGFloat = 0
+
+    var body: some View {
+        ScrollViewReader { reader in
+            ScrollView(.vertical) {
+                content()
+                    .fixedSize(horizontal: false, vertical: true)
+                    .id("card-top")
+                    .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { contentHeight = $0 }
+            }
+            .frame(height: min(maximumHeight, contentHeight > 0 ? contentHeight : maximumHeight))
+            .scrollDisabled(contentHeight <= maximumHeight || resetScroll)
+            .scrollBounceBehavior(.basedOnSize)
+            .onChange(of: resetScroll) { _, reset in
+                if reset { reader.scrollTo("card-top", anchor: .top) }
+            }
+        }
     }
 }

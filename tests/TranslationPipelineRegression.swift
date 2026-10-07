@@ -12,17 +12,20 @@ actor AppleMessageRuntime {
     var glossCalls = 0
     init(events: Events, scenario: String = "normal") { self.events = events; self.scenario = scenario }
     func segmentText(to prompt: String, languages: [LanguageProfile]) async throws -> String {
-        precondition(prompt.contains("J'ai faim."))
+        precondition(prompt.contains("J'ai faim"))
         precondition(prompt.contains("inserting |"))
         await events.append("segmentation")
         segmentationCalls += 1
         if scenario == "throws" { throw TestFailure.unavailable }
         if scenario == "cancel" { throw CancellationError() }
         if scenario == "badSegmentation" || (scenario == "repair" && segmentationCalls == 1) { return "J'ai" }
-        if scenario == "emptyChunk" { return "J'ai|| faim." }
-        if scenario == "commentary" { return "Here are the chunks: J'ai| faim." }
+        if scenario == "emptyChunk" { return "J'ai|| faim" }
+        if scenario == "commentary" { return "Here are the chunks: J'ai| faim" }
         if scenario == "repair" { precondition(prompt.contains("Previous output:") && prompt.contains("faim")) }
-        return "J'ai| faim."
+        return "J'ai| faim"
+    }
+    func transformText(to prompt: String, languages: [LanguageProfile], instructions: String, greedy: Bool = false) async throws -> String {
+        preconditionFailure("Translation pipeline must not request Hanja eagerly")
     }
     func respond<T: Generable>(to prompt: String, generating type: T.Type, languages: [LanguageProfile]) async throws -> T {
         if type == GeneratedSource.self {
@@ -30,11 +33,11 @@ actor AppleMessageRuntime {
             await events.append("source")
             return try T(GeneratedContent(json: #"{"sourceText":"I am hungry."}"#))
         }
-        precondition(prompt.contains("J'ai faim."))
+        precondition(prompt.contains("J'ai faim"))
         precondition(type == GeneratedGlosses.self)
         await events.append("glosses")
         glossCalls += 1
-        precondition(prompt.contains("1: \" faim.\""))
+        precondition(prompt.contains("1: \" faim\""))
         if scenario == "repair" && glossCalls == 1 {
             return try T(GeneratedContent(json: #"{"glosses":[{"chunkID":0,"literalText":"I have"}]}"#))
         }
@@ -56,7 +59,7 @@ struct Translator: TextTranslationService {
     let events: Events
     var fails = false
     func translate(_ text: String, languageMode: LanguageMode) async throws -> String {
-        precondition(text == "I am hungry.")
+        precondition(text == "I am hungry")
         await events.append("apple")
         if fails { throw TestFailure.unavailable }
         return "J'ai faim."
@@ -72,12 +75,29 @@ struct Translator: TextTranslationService {
         preconditionFailure("Translation queue failed to advance")
     }
     @MainActor static func main() async throws {
+        let punctuationCases = [
+            ("Hello.", "Hello"), ("你好。", "你好"), ("안녕하세요.", "안녕하세요"),
+            ("मुझे भूख लगी है।", "मुझे भूख लगी है"), ("Hello.  ", "Hello"),
+            ("Really?", "Really?"), ("Great!", "Great!"), ("Wait...", "Wait..."),
+            ("Wait…", "Wait…"), ("In the U.S.", "In the U.S."), ("Ask Dr.", "Ask Dr."),
+            ("J. Smith.", "J. Smith"), ("It costs 3.14.", "It costs 3.14"),
+            ("First. Second.", "First. Second"), ("", "")
+        ]
+        for (input, expected) in punctuationCases { precondition(MessagePunctuation.clean(input) == expected) }
+        let legacyCard = LearningMessage(sourceText: "Hungry.", normalizedSourceText: "Hungry.",
+            targetText: "学校。", literalMeaning: "School.",
+            literalChunks: [MessageLiteralChunk(targetText: "学校", literalText: "school"), MessageLiteralChunk(targetText: "。", literalText: ".")],
+            japanesePronunciation: [JapanesePronunciationUnit(surface: "学校。", katakanaReading: "ガッコウ", isParticle: false)])
+        precondition(legacyCard.targetText == "学校" && legacyCard.normalizedSourceText == "Hungry")
+        precondition(legacyCard.literalChunks.map(\.targetText).joined() == legacyCard.targetText)
+        precondition(legacyCard.japanesePronunciation == nil)
+        print("PASS: terminal periods, ellipses, abbreviations, internal punctuation, and legacy chunk alignment")
         let events = Events()
         let service = FoundationModelsMessageService(runtime: AppleMessageRuntime(events: events), translator: Translator(events: events))
         let card = try await service.message(for: "Me be hungry", languageMode: .defaultMode)
         precondition(card.sourceText == "Me be hungry")
-        precondition(card.normalizedSourceText == "I am hungry.")
-        precondition(card.targetText == "J'ai faim.")
+        precondition(card.normalizedSourceText == "I am hungry")
+        precondition(card.targetText == "J'ai faim")
         precondition(card.literalChunks.count == 2)
         precondition(card.literalChunks.map(\.targetText).joined() == card.targetText)
         let sequence = await events.values
@@ -95,7 +115,7 @@ struct Translator: TextTranslationService {
             let trace = Events()
             let candidate = FoundationModelsMessageService(runtime: AppleMessageRuntime(events: trace, scenario: scenario), translator: Translator(events: trace))
             let result = try await candidate.message(for: "Me be hungry", languageMode: .defaultMode)
-            precondition(result.targetText == "J'ai faim.")
+            precondition(result.targetText == "J'ai faim")
             let calls = await trace.values
             if scenario == "repair" {
                 precondition(result.literalChunks.map(\.literalText) == ["I have", "hunger"])

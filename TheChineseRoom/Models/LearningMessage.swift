@@ -10,6 +10,7 @@ struct LearningMessage: Identifiable, Equatable {
     let examples: [MessageExample]?
     var japanesePronunciation: [JapanesePronunciationUnit]?
     var ipaPronunciation: [IPAPronunciationUnit]?
+    var hanjaAnnotations: [HanjaAnnotation]?
     var audioState: MessageAudioState
 
     init(
@@ -22,17 +23,34 @@ struct LearningMessage: Identifiable, Equatable {
         examples: [MessageExample]? = nil,
         japanesePronunciation: [JapanesePronunciationUnit]? = nil,
         ipaPronunciation: [IPAPronunciationUnit]? = nil,
+        hanjaAnnotations: [HanjaAnnotation]? = nil,
         audioState: MessageAudioState = .notLoaded
     ) {
         self.id = id
         self.sourceText = sourceText
-        self.normalizedSourceText = normalizedSourceText
-        self.targetText = targetText
-        self.literalMeaning = literalMeaning
-        self.literalChunks = literalChunks ?? [MessageLiteralChunk(targetText: targetText, literalText: literalMeaning)]
+        self.normalizedSourceText = MessagePunctuation.clean(normalizedSourceText)
+        let cleanedTarget = MessagePunctuation.clean(targetText)
+        self.targetText = cleanedTarget
+        self.literalMeaning = MessagePunctuation.clean(literalMeaning)
+        var chunks = literalChunks ?? [MessageLiteralChunk(targetText: targetText, literalText: literalMeaning)]
+        // Older saved cards already have chunks. Remove only the deleted suffix,
+        // leaving every earlier chunk and annotation offset in place.
+        var removed = targetText.count - cleanedTarget.count
+        while removed > 0, let last = chunks.popLast() {
+            let count = min(removed, last.targetText.count)
+            removed -= count
+            let remaining = String(last.targetText.dropLast(count))
+            if !remaining.isEmpty {
+                chunks.append(MessageLiteralChunk(targetText: remaining, literalText: MessagePunctuation.clean(last.literalText)))
+            }
+        }
+        self.literalChunks = chunks
         self.examples = examples
-        self.japanesePronunciation = japanesePronunciation
-        self.ipaPronunciation = ipaPronunciation
+        // Regenerate legacy readings against the cleaned target instead of
+        // persisting pronunciation spans that still cover deleted punctuation.
+        self.japanesePronunciation = cleanedTarget == targetText ? japanesePronunciation : nil
+        self.ipaPronunciation = cleanedTarget == targetText ? ipaPronunciation : nil
+        self.hanjaAnnotations = hanjaAnnotations
         self.audioState = audioState
     }
 }
@@ -62,6 +80,11 @@ struct MessageExample: Identifiable, Equatable {
     let id = UUID()
     let sourceText: String
     let targetText: String
+
+    init(sourceText: String, targetText: String) {
+        self.sourceText = MessagePunctuation.clean(sourceText)
+        self.targetText = MessagePunctuation.clean(targetText)
+    }
 }
 
 enum MessageAudioState: Equatable {
@@ -376,6 +399,7 @@ struct AppStrings: Equatable {
     var settingsTitle: String { text("settingsTitle") }
     var localTitle: String { text("localTitle") }
     var localLabel: String { text("localLabel") }
+    var dictationStarting: String { text("dictationStarting") }
     var listeningLabel: String { text("listeningLabel") }
     var inputPlaceholder: String { text("inputPlaceholder") }
     var sendLabel: String { text("sendLabel") }
@@ -390,6 +414,7 @@ struct AppStrings: Equatable {
     var notationSystemTitle: String { text("notationSystemTitle") }
     var pronunciationPlaceholder: String { text("pronunciationPlaceholder") }
     var pronunciationUnavailable: String { text("pronunciationUnavailable") }
+    var hanjaUnavailable: String { text("hanjaUnavailable") }
     var pinyinFooter: String { text("pinyinFooter") }
     var pronunciationFooter: String { text("pronunciationFooter") }
 
@@ -411,5 +436,77 @@ struct AppStrings: Equatable {
     func languageName(_ language: LanguageProfile) -> String {
         Locale(identifier: localeIdentifier).localizedString(forIdentifier: language.localeIdentifier)
             ?? language.nativeName
+    }
+}
+
+/// UTF-16 offsets refer to the exact target sentence, including repeated words.
+struct HanjaAnnotation: Codable, Equatable, Identifiable {
+    let offset: Int
+    let surface: String
+    let hanja: String
+    var id: Int { offset }
+
+    static func supports(_ mode: LanguageMode) -> Bool {
+        mode.source.id == LanguageCatalog.simplifiedChinese.id &&
+        mode.target.id == LanguageCatalog.koreanHangul.id
+    }
+
+    /// A mixed Hangul/Hanja sentence has an exact one-character correspondence.
+    /// No whitespace normalization or guessed alignment is allowed.
+    static func validated(transformation: String, text: String) -> [Self]? {
+        guard transformation.count == text.count else { return nil }
+        var spans: [(surface: String, hanja: String)] = []
+        for (source, output) in zip(text, transformation) {
+            let surface = String(source)
+            let hanja = source == output ? "" : String(output)
+            if let last = spans.last, last.hanja.isEmpty == hanja.isEmpty {
+                spans[spans.count - 1] = (last.surface + surface, last.hanja + hanja)
+            } else {
+                spans.append((surface, hanja))
+            }
+        }
+        return validated(spans: spans, text: text)
+    }
+
+    /// Complete source coverage avoids guessing which occurrence a model meant.
+    /// This validates alignment and script, not the correctness of the etymology.
+    static func validated(spans: [(surface: String, hanja: String)], text: String) -> [Self]? {
+        guard !spans.isEmpty, spans.map(\.surface).joined() == text else { return nil }
+        var result: [Self] = []
+        var offset = 0
+        for span in spans {
+            guard !span.surface.isEmpty else { return nil }
+            if !span.hanja.isEmpty {
+                guard span.surface.range(of: #"^[가-힣]+$"#, options: .regularExpression) != nil,
+                      span.hanja.range(of: #"^\p{Unified_Ideograph}+$"#, options: .regularExpression) != nil,
+                      span.surface.count == span.hanja.count else { return nil }
+                result.append(Self(offset: offset, surface: span.surface, hanja: span.hanja))
+            }
+            offset += span.surface.utf16.count
+        }
+        return result
+    }
+}
+
+/// Presentation punctuation is deterministic and independent of model prompts.
+enum MessagePunctuation {
+    static func clean(_ text: String) -> String {
+        var result = text
+        while result.last?.isWhitespace == true { result.removeLast() }
+        guard let ending = result.last, [".", "。", "．", "।", "۔"].contains(ending) else { return result }
+        // Preserve ellipses, including repeated full stops in other scripts.
+        if result.dropLast().last == ending { return result }
+        if ending == "." {
+            let token = result.split(whereSeparator: \.isWhitespace).last.map(String.init) ?? result
+            let stem = String(token.dropLast())
+            // Dotted abbreviations (U.S., e.g.), initials, and common undotted abbreviations.
+            let parts = stem.split(separator: ".", omittingEmptySubsequences: false)
+            if parts.count > 1 && parts.allSatisfy({ !$0.isEmpty && $0.allSatisfy(\.isLetter) }) { return result }
+            if stem.count == 1 && stem.first?.isUppercase == true { return result }
+            let abbreviations: Set<String> = ["mr", "mrs", "ms", "dr", "prof", "sr", "jr", "st", "vs", "etc", "approx", "dept", "inc", "ltd", "co", "corp", "no", "fig", "vol", "г", "ул", "д", "рис", "стр"]
+            if abbreviations.contains(stem.lowercased()) { return result }
+        }
+        result.removeLast()
+        return result
     }
 }

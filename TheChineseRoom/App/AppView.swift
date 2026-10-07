@@ -28,6 +28,7 @@ struct AppView: View {
                 MessageHomeView(store: store, appStrings: appLocale.strings)
             }
         }
+        .appFont(.body)
         .background {
             if let translator = store.appleTranslation {
                 AppleTranslationHost(translator: translator)
@@ -37,6 +38,7 @@ struct AppView: View {
         .onAppear {
             store.attachPersistence(modelContext)
         }
+        .appClock()
     }
 }
 
@@ -66,9 +68,9 @@ private struct FirstLaunchLanguageModeView: View {
 
                 VStack(alignment: .leading, spacing: 10) {
                     Text(appStrings.firstLaunchTitle)
-                        .font(.largeTitle.weight(.bold))
+                        .appFont(.largeTitle)
                     Text(appStrings.firstLaunchSubtitle)
-                        .font(.body)
+                        .appFont(.body)
                         .foregroundStyle(.black.opacity(0.65))
                 }
 
@@ -81,7 +83,7 @@ private struct FirstLaunchLanguageModeView: View {
                     onContinue(LanguageMode(source: source, target: target))
                 } label: {
                     Text(appStrings.continueButtonTitle)
-                        .font(.headline)
+                        .appFont(.headline)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
                         .background(source == target ? .black.opacity(0.25) : .black)
@@ -101,16 +103,18 @@ private struct FirstLaunchLanguageModeView: View {
     private func languagePicker(title: String, selection: Binding<LanguageProfile>) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(title)
-                .font(.subheadline.weight(.semibold))
+                .appFont(.subheadline)
                 .foregroundStyle(.black.opacity(0.7))
 
             Picker(title, selection: selection) {
                 ForEach(LanguageCatalog.supportedLanguages) { language in
                     Text("\(appStrings.languageName(language)) · \(language.nativeName)")
+                        .appFont(.body)
                         .tag(language)
                 }
             }
             .pickerStyle(.menu)
+            .appFont(.body)
             .padding(.horizontal, 14)
             .padding(.vertical, 12)
             .frame(maxWidth: .infinity, alignment: .leading)

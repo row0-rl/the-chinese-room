@@ -4,9 +4,14 @@ import Foundation
 protocol DictationService {
     var onTranscriptChange: ((String) -> Void)? { get set }
 
+    func prepare(localeIdentifier: String)
     func startRecording(localeIdentifier: String) async throws
     func finishRecording() async throws -> String
     func cancelRecording()
+}
+
+extension DictationService {
+    func prepare(localeIdentifier: String) {}
 }
 
 struct UnavailableDictationService: DictationService {

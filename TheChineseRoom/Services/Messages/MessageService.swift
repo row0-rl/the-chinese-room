@@ -1,4 +1,5 @@
 protocol MessageService {
+    func hanjaAnnotations(for message: LearningMessage, languageMode: LanguageMode) async -> [HanjaAnnotation]?
     func ipaPronunciation(for text: String, languageMode: LanguageMode) async -> [IPAPronunciationUnit]?
     func randomMessage(
         after currentMessage: LearningMessage?,
@@ -13,6 +14,8 @@ protocol MessageService {
 }
 
 extension MessageService {
+    func hanjaAnnotations(for message: LearningMessage, languageMode: LanguageMode) async -> [HanjaAnnotation]? { nil }
+
     func ipaPronunciation(for text: String, languageMode: LanguageMode) async -> [IPAPronunciationUnit]? {
         nil
     }

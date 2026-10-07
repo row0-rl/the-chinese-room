@@ -7,7 +7,7 @@ struct ErrorBanner: View {
         HStack(spacing: 8) {
             Image(systemName: "exclamationmark.triangle.fill")
             Text(message)
-                .font(.footnote)
+                .appFont(.footnote)
                 .lineLimit(3)
             Spacer(minLength: 0)
         }

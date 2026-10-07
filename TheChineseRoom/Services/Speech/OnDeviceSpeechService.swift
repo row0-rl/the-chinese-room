@@ -78,6 +78,13 @@ final class OnDeviceSpeechService: SpeechService {
         }
     }
 
+    func stop() {
+        requestID = UUID()
+        player?.stop()
+        player = nil
+        synthesizer.stopSpeaking(at: .immediate)
+    }
+
     func speak(_ text: String, localeIdentifier: String, voiceIdentifier: String?) async throws {
         let requestStarted = Date()
         let id = UUID()
