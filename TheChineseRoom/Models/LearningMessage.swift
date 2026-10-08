@@ -432,6 +432,15 @@ struct AppStrings: Equatable {
     var systemDefaultTitle: String { text("systemDefaultTitle") }
     var voiceFooter: String { text("voiceFooter") }
     var speechUnavailableTitle: String { text("speechUnavailableTitle") }
+    var appearanceTitle: String { text("appearanceTitle") }
+
+    func appearanceName(_ appearance: AppAppearance) -> String {
+        switch appearance {
+        case .system: text("appearanceSystem")
+        case .light: text("appearanceLight")
+        case .dark: text("appearanceDark")
+        }
+    }
 
     func languageName(_ language: LanguageProfile) -> String {
         Locale(identifier: localeIdentifier).localizedString(forIdentifier: language.localeIdentifier)

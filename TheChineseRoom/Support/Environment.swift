@@ -88,6 +88,54 @@ extension View {
     }
 }
 
+/// The user's theme choice; `system` follows the device appearance.
+enum AppAppearance: String, CaseIterable, Identifiable {
+    case system, light, dark
+
+    static let storageKey = "appAppearance"
+    var id: Self { self }
+
+    var colorScheme: ColorScheme? {
+        switch self {
+        case .system: nil
+        case .light: .light
+        case .dark: .dark
+        }
+    }
+}
+
+/// Light beige paper with black ink; dark mode is warm charcoal with cream ink.
+extension UIColor {
+    static let chineseRoomBackground = adaptive(light: UIColor(red: 0.91, green: 0.86, blue: 0.75, alpha: 1),
+                                                dark: UIColor(hex: 0x1F1813))
+    static let chineseRoomInk = adaptive(light: .black, dark: UIColor(hex: 0xF0E2CA))
+    static let chineseRoomCard = adaptive(light: UIColor(white: 1, alpha: 0.5), dark: UIColor(hex: 0x2D241C))
+    static let chineseRoomRule = adaptive(light: UIColor(red: 0.94, green: 0.81, blue: 0.34, alpha: 0.65),
+                                          dark: UIColor(hex: 0xE4A949, alpha: 0.29))
+
+    /// White over beige; a faint cream over charcoal at roughly a quarter of the strength.
+    static func chineseRoomControl(_ lightOpacity: CGFloat) -> UIColor {
+        adaptive(light: UIColor(white: 1, alpha: lightOpacity),
+                 dark: UIColor(hex: 0xF0E2CA, alpha: lightOpacity * 0.24))
+    }
+
+    private static func adaptive(light: UIColor, dark: UIColor) -> UIColor {
+        UIColor { $0.userInterfaceStyle == .dark ? dark : light }
+    }
+
+    private convenience init(hex: UInt32, alpha: CGFloat = 1) {
+        self.init(red: CGFloat((hex >> 16) & 0xFF) / 255, green: CGFloat((hex >> 8) & 0xFF) / 255,
+                  blue: CGFloat(hex & 0xFF) / 255, alpha: alpha)
+    }
+}
+
 extension Color {
-    static let chineseRoomBackground = Color(red: 0.91, green: 0.86, blue: 0.75)
+    static let chineseRoomBackground = Color(uiColor: .chineseRoomBackground)
+    static let chineseRoomInk = Color(uiColor: .chineseRoomInk)
+    static let chineseRoomCard = Color(uiColor: .chineseRoomCard)
+    static let chineseRoomRule = Color(uiColor: .chineseRoomRule)
+
+    static func chineseRoomControl(_ lightOpacity: CGFloat) -> Color {
+        Color(uiColor: .chineseRoomControl(lightOpacity))
+    }
 }

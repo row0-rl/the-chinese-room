@@ -3,7 +3,8 @@ import PencilKit
 import SwiftUI
 import UIKit
 
-/// Native text layout and accessibility, with black lettering finished in pen ink.
+/// Native text layout and accessibility, with lettering finished in pen ink.
+/// Ink renders black and is tinted with the current appearance's ink color when drawn.
 struct InkText: View {
     let text: String
     @Environment(\.font) private var font
@@ -36,6 +37,9 @@ private struct InkTextLabel: UIViewRepresentable {
         label.numberOfLines = 0
         label.isAccessibilityElement = false
         label.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        label.registerForTraitChanges([UITraitUserInterfaceStyle.self]) { (label: TextInkLabel, _) in
+            label.setNeedsDisplay()
+        }
         return label
     }
 
@@ -48,7 +52,7 @@ private struct InkTextLabel: UIViewRepresentable {
         }
         paragraph.lineBreakMode = .byWordWrapping
         label.configure(NSAttributedString(string: text, attributes: [
-            .font: font, .foregroundColor: UIColor.black, .paragraphStyle: paragraph
+            .font: font, .foregroundColor: UIColor.chineseRoomInk, .paragraphStyle: paragraph
         ]), scale: scale)
     }
 
@@ -94,7 +98,10 @@ private final class TextInkLabel: UILabel {
     }
 
     override func drawText(in rect: CGRect) {
-        if let inkImage { inkImage.draw(in: bounds) }
+        if let inkImage {
+            inkImage.withTintColor(UIColor.chineseRoomInk.resolvedColor(with: traitCollection),
+                                   renderingMode: .alwaysOriginal).draw(in: bounds)
+        }
         else { super.drawText(in: rect) }
     }
 
@@ -144,7 +151,10 @@ private actor TextInkRenderer {
 
     private func render(_ request: TextInkRequest) -> UIImage {
         let bounds = CGRect(origin: .zero, size: request.size)
-        let framesetter = CTFramesetterCreateWithAttributedString(request.text)
+        // Render in black; TextInkLabel tints the finished image for the current appearance.
+        let text = NSMutableAttributedString(attributedString: request.text)
+        text.addAttribute(.foregroundColor, value: UIColor.black, range: NSRange(location: 0, length: text.length))
+        let framesetter = CTFramesetterCreateWithAttributedString(text)
         let frame = CTFramesetterCreateFrame(framesetter, CFRange(location: 0, length: 0),
                                              CGPath(rect: bounds, transform: nil), nil)
         let lines = CTFrameGetLines(frame) as! [CTLine]
@@ -195,7 +205,7 @@ private actor TextInkRenderer {
         format.opaque = false
         return UIGraphicsImageRenderer(size: request.size, format: format).image { context in
             ink?.withTintColor(.black, renderingMode: .alwaysOriginal).draw(in: bounds)
-            // Fill after the ink to keep lettering continuous and opaque black.
+            // Fill after the ink to keep lettering continuous and opaque; the label tints it.
             // Core Text also preserves fallback fonts without vector glyph paths.
             context.cgContext.saveGState()
             context.cgContext.textMatrix = .identity

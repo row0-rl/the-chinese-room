@@ -81,7 +81,7 @@ struct MessageCard: View {
             .frame(maxWidth: .infinity, alignment: .topLeading)
         }
         .background { NotebookRules(seed: message.id) }
-        .background(.white.opacity(0.5), in: PencilRectangleShape(seed: message.id))
+        .background(Color.chineseRoomCard, in: PencilRectangleShape(seed: message.id))
         .clipShape(PencilRectangleShape(seed: message.id))
         .overlay(
             PencilRectangle(seed: message.id)
@@ -104,7 +104,7 @@ struct MessageCard: View {
         let value = text ?? (notationSystem == .pinyin || pronunciationFailed ? "—" : notationSystem.placeholder)
         return InkText(value)
             .appFont(.caption)
-            .foregroundStyle(.black)
+            .foregroundStyle(Color.chineseRoomInk)
             .accessibilityLabel(text ?? (notationSystem == .pinyin || pronunciationFailed
                 ? appStrings.pronunciationUnavailable : appStrings.pronunciationPlaceholder))
     }
@@ -124,7 +124,7 @@ struct MessageCard: View {
                 hanjaLabels(for: units)
                 InkText(appStrings.literalUnavailable)
                     .appFont(.body)
-                    .foregroundStyle(.black)
+                    .foregroundStyle(Color.chineseRoomInk)
             }
         } else if let groups {
             FlowLayout(spacing: 8, lineSpacing: 12) {
@@ -140,14 +140,14 @@ struct MessageCard: View {
                             ForEach(group.chunks) { chunk in
                                 InkText(chunk.literalText)
                                     .appFont(.subheadline)
-                                    .foregroundStyle(.black)
+                                    .foregroundStyle(Color.chineseRoomInk)
                                     .multilineTextAlignment(.center)
                             }
                         }
                     }
                     .padding(.horizontal, 4)
                     .padding(.vertical, 3)
-                    .background(.black.opacity(0.035))
+                    .background(Color.chineseRoomInk.opacity(0.035))
                     .clipShape(RoundedRectangle(cornerRadius: 6))
                 }
             }
@@ -164,12 +164,12 @@ struct MessageCard: View {
                                 .appExpressionFont(size: annotationFontSize)
                             InkText(chunk.literalText)
                                 .appFont(.subheadline)
-                                .foregroundStyle(.black)
+                                .foregroundStyle(Color.chineseRoomInk)
                                 .multilineTextAlignment(.center)
                         }
                         .padding(.horizontal, 4)
                         .padding(.vertical, 3)
-                        .background(.black.opacity(0.035))
+                        .background(Color.chineseRoomInk.opacity(0.035))
                         .clipShape(RoundedRectangle(cornerRadius: 6))
                     }
                 }
@@ -184,7 +184,7 @@ struct MessageCard: View {
         return ForEach(annotations) { annotation in
             InkText("\(annotation.surface) · \(annotation.hanja)")
                 .appFont(.caption)
-                .foregroundStyle(.black)
+                .foregroundStyle(Color.chineseRoomInk)
                 .fixedSize(horizontal: false, vertical: true)
         }
     }

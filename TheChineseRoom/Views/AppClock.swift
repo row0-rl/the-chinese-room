@@ -13,7 +13,7 @@ struct AppClock: View {
                 .minute()
                 .locale(.autoupdatingCurrent))
                 .font(.custom(AppFont.name, fixedSize: 20))
-                .foregroundStyle(.black)
+                .foregroundStyle(Color.chineseRoomInk)
                 .fixedSize()
                 .accessibilityLabel(Text(context.date, format: .dateTime
                     .hour().minute().locale(.autoupdatingCurrent)))

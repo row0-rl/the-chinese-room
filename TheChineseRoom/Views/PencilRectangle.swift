@@ -28,7 +28,9 @@ struct PencilRectangle: View {
             ZStack {
                 if let renderedBorder, renderedBorder.seed == seed {
                     Image(uiImage: renderedBorder.image)
+                        .renderingMode(.template)
                         .resizable()
+                        .foregroundStyle(Color.chineseRoomInk)
                         .frame(width: geometry.size.width, height: geometry.size.height)
                 }
             }
@@ -121,7 +123,7 @@ private actor PencilBorderRenderer {
         let image: UIImage? = autoreleasepool {
             let drawing = PencilBorderDrawing.make(request)
             var image: UIImage?
-            // Keep graphite black even when the system's appearance is dark.
+            // Render black graphite; PencilRectangle tints it for the current appearance.
             UITraitCollection(userInterfaceStyle: .light).performAsCurrent {
                 image = drawing.image(from: CGRect(origin: .zero, size: request.size), scale: request.scale)
             }
@@ -343,10 +345,10 @@ private struct PencilBorderRandom {
             Text("A little pencil, a different expression")
                 .padding(PencilRectangle.contentInset)
                 .frame(maxWidth: .infinity, minHeight: CGFloat(100 + index * 50))
-                .background(.white.opacity(0.5), in: PencilRectangleShape(seed: UUID(uuidString: "00000000-0000-0000-0000-00000000000\(index)")!))
+                .background(Color.chineseRoomCard, in: PencilRectangleShape(seed: UUID(uuidString: "00000000-0000-0000-0000-00000000000\(index)")!))
                 .overlay(PencilRectangle(seed: UUID(uuidString: "00000000-0000-0000-0000-00000000000\(index)")!))
         }
     }
     .padding(24)
-    .background(Color(red: 0.96, green: 0.94, blue: 0.89))
+    .background(Color.chineseRoomBackground)
 }

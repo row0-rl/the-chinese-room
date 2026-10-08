@@ -68,6 +68,11 @@ linguistic accuracy or official locale support. IPA accuracy remains experimenta
 
 Main background color is light beige. Text is black.
 
+Settings › Appearance chooses System, Light or Dark (stored in `UserDefaults`). Dark uses a warm charcoal palette: background
+`#1F1813`, cream ink `#F0E2CA`, card fill `#2D241C`, and amber notebook rules.
+All app colors come from the adaptive palette in `Support/Environment.swift`.
+PencilKit text, borders and rules render black or yellow and are tinted for the current appearance when drawn.
+
 ### Hanja annotations
 
 For Chinese speakers learning Korean, preparing a message starts a separate,

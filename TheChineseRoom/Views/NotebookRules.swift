@@ -2,6 +2,7 @@ import PencilKit
 import SwiftUI
 
 /// Fixed notebook ruling, independent of text layout and seeded per card.
+/// The crayon texture is tinted with the appearance's rule color.
 struct NotebookRules: View {
     let seed: UUID
     var interval: CGFloat = 42
@@ -17,7 +18,9 @@ struct NotebookRules: View {
             ZStack {
                 if let image {
                     Image(uiImage: image)
+                        .renderingMode(.template)
                         .resizable()
+                        .foregroundStyle(Color.chineseRoomRule)
                         .frame(width: geometry.size.width, height: geometry.size.height)
                 }
             }
@@ -29,7 +32,6 @@ struct NotebookRules: View {
             }
         }
         .padding(.horizontal, 36)
-        .opacity(0.65)
         .allowsHitTesting(false)
         .accessibilityHidden(true)
     }

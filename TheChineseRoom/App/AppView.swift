@@ -71,7 +71,7 @@ private struct FirstLaunchLanguageModeView: View {
                         .appFont(.largeTitle)
                     Text(appStrings.firstLaunchSubtitle)
                         .appFont(.body)
-                        .foregroundStyle(.black.opacity(0.65))
+                        .foregroundStyle(Color.chineseRoomInk.opacity(0.65))
                 }
 
                 VStack(spacing: 14) {
@@ -86,7 +86,7 @@ private struct FirstLaunchLanguageModeView: View {
                         .appFont(.headline)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
-                        .background(source == target ? .black.opacity(0.25) : .black)
+                        .background(source == target ? Color.chineseRoomInk.opacity(0.25) : Color.chineseRoomInk)
                         .foregroundStyle(Color.chineseRoomBackground)
                         .clipShape(RoundedRectangle(cornerRadius: 8))
                 }
@@ -96,7 +96,7 @@ private struct FirstLaunchLanguageModeView: View {
             }
             .padding(28)
         }
-        .foregroundStyle(.black)
+        .foregroundStyle(Color.chineseRoomInk)
         .environment(\.locale, Locale(identifier: appStrings.localeIdentifier))
     }
 
@@ -104,7 +104,7 @@ private struct FirstLaunchLanguageModeView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text(title)
                 .appFont(.subheadline)
-                .foregroundStyle(.black.opacity(0.7))
+                .foregroundStyle(Color.chineseRoomInk.opacity(0.7))
 
             Picker(title, selection: selection) {
                 ForEach(LanguageCatalog.supportedLanguages) { language in
@@ -118,7 +118,7 @@ private struct FirstLaunchLanguageModeView: View {
             .padding(.horizontal, 14)
             .padding(.vertical, 12)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(.white.opacity(0.52))
+            .background(Color.chineseRoomControl(0.52))
             .clipShape(RoundedRectangle(cornerRadius: 8))
         }
     }

@@ -48,7 +48,7 @@ struct MessageHomeView: View {
             floatingLocalIndicator
             settingsButton
         }
-        .foregroundStyle(.black)
+        .foregroundStyle(Color.chineseRoomInk)
         .onAppear { cardDragHaptics.prepare() }
         .onChange(of: scenePhase) { _, phase in
             if phase != .active { cardDragHaptics.stopRumble() }
@@ -96,7 +96,7 @@ struct MessageHomeView: View {
                     .appFont(.caption)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
-                    .background(.black.opacity(0.08))
+                    .background(Color.chineseRoomInk.opacity(0.08))
                     .clipShape(Capsule())
                     .accessibilityLabel(appStrings.localLabel)
             }
@@ -117,8 +117,8 @@ struct MessageHomeView: View {
                 Image(systemName: "gearshape.fill")
                     .font(.body.weight(.semibold))
                     .frame(width: 40, height: 40)
-                    .background(.white.opacity(0.42))
-                    .foregroundStyle(.black)
+                    .background(Color.chineseRoomControl(0.42))
+                    .foregroundStyle(Color.chineseRoomInk)
                     .clipShape(Circle())
             }
             .buttonStyle(.plain)
@@ -146,30 +146,22 @@ struct MessageHomeView: View {
             CappedCardScroll(maximumHeight: maximumCardHeight(in: height)) {
                 VStack(alignment: .leading, spacing: 22) {
                     if text.isEmpty {
-                        RoundedRectangle(cornerRadius: 5)
-                            .fill(.black.opacity(0.1))
+                        WritingWave()
                             .frame(width: 180, height: 24)
                     } else {
                         InkText(MessagePunctuation.clean(text))
                             .appFont(.title3)
                             .fixedSize(horizontal: false, vertical: true)
                     }
-                    VStack(alignment: .leading, spacing: 12) {
-                        RoundedRectangle(cornerRadius: 6)
-                            .fill(.black.opacity(0.1))
-                            .frame(height: 42)
-                        RoundedRectangle(cornerRadius: 6)
-                            .fill(.black.opacity(0.1))
-                            .frame(maxWidth: 180)
-                            .frame(height: 28)
-                    }
-                    .accessibilityLabel(appStrings.loadingMessageLabel)
+                    WritingWave()
+                        .frame(height: 64)
+                        .accessibilityLabel(appStrings.loadingMessageLabel)
                 }
                 .padding(PencilRectangle.contentInset)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
             .background { NotebookRules(seed: seed) }
-            .background(.white.opacity(0.5), in: PencilRectangleShape(seed: seed))
+            .background(Color.chineseRoomCard, in: PencilRectangleShape(seed: seed))
             .clipShape(PencilRectangleShape(seed: seed))
             .overlay(PencilRectangle(seed: seed))
             .frame(height: height, alignment: .center)
@@ -370,8 +362,8 @@ struct MessageHomeView: View {
             Image(systemName: "translate")
                 .font(.title3.weight(.semibold))
                 .frame(width: 44, height: 44)
-            .background(.white.opacity(0.42))
-                .foregroundStyle(.black)
+            .background(Color.chineseRoomControl(0.42))
+                .foregroundStyle(Color.chineseRoomInk)
                 .clipShape(Circle())
         }
         .buttonStyle(.plain)
@@ -421,7 +413,7 @@ struct MessageHomeView: View {
                 .focused($isInputFocused)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 12)
-                .background(.white.opacity(0.58))
+                .background(Color.chineseRoomControl(0.58))
                 .clipShape(RoundedRectangle(cornerRadius: 8))
 
             Button {
@@ -429,7 +421,7 @@ struct MessageHomeView: View {
             } label: {
                 Image(systemName: "arrow.up.circle.fill")
                     .font(.system(size: 34))
-                    .foregroundStyle(.black)
+                    .foregroundStyle(Color.chineseRoomInk)
             }
             .disabled(inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || store.isGenerating)
             .opacity(inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.35 : 1)
@@ -446,7 +438,7 @@ struct MessageHomeView: View {
             DictationPressButton(
                 label: appStrings.holdToSpeakLabel,
                 enabled: !store.isGenerating && !store.isTranscribing,
-                foreground: UIColor(Color.chineseRoomBackground),
+                foreground: .chineseRoomBackground,
                 onPress: {
                     cardDragHaptics.stopRumble()
                     skipNextCardImpact = false
@@ -475,8 +467,8 @@ struct MessageHomeView: View {
                 Image(systemName: "keyboard")
                     .font(.title3.weight(.semibold))
                     .frame(width: 48, height: 48)
-                    .background(.white.opacity(0.58))
-                    .foregroundStyle(.black)
+                    .background(Color.chineseRoomControl(0.58))
+                    .foregroundStyle(Color.chineseRoomInk)
                     .clipShape(Circle())
             }
             .accessibilityLabel(appStrings.keyboardLabel)
@@ -588,63 +580,111 @@ private struct MessageTitlePreview: View {
     let edge: VerticalEdge
 
     var body: some View {
-        Text(title ?? loadingLabel)
-            .appFont(.title3)
-            .lineLimit(1)
-            .foregroundStyle(.black.opacity(title == nil ? 0.45 : 1))
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(PencilRectangle.contentInset)
-            .frame(maxWidth: .infinity, maxHeight: .infinity,
-                   alignment: edge == .top ? .topLeading : .bottomLeading)
-            .background { NotebookRules(seed: PencilRectangle.placeholderSeed) }
-            .background(.white.opacity(0.5), in: PencilRectangleShape(seed: PencilRectangle.placeholderSeed))
-            .clipShape(PencilRectangleShape(seed: PencilRectangle.placeholderSeed))
-            .overlay(
-                PencilRectangle(seed: PencilRectangle.placeholderSeed)
-            )
+        Group {
+            if let title {
+                Text(title)
+                    .appFont(.title3)
+                    .lineLimit(1)
+                    .foregroundStyle(Color.chineseRoomInk)
+            } else {
+                WritingWave()
+                    .frame(height: 24)
+                    .accessibilityLabel(loadingLabel)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(PencilRectangle.contentInset)
+        .frame(maxWidth: .infinity, maxHeight: .infinity,
+               alignment: edge == .top ? .topLeading : .bottomLeading)
+        .background { NotebookRules(seed: PencilRectangle.placeholderSeed) }
+        .background(Color.chineseRoomCard, in: PencilRectangleShape(seed: PencilRectangle.placeholderSeed))
+        .clipShape(PencilRectangleShape(seed: PencilRectangle.placeholderSeed))
+        .overlay(
+            PencilRectangle(seed: PencilRectangle.placeholderSeed)
+        )
     }
 }
 
 private struct MessageSkeletonCard: View {
     let loadingLabel: String
     var body: some View {
-        VStack(alignment: .leading, spacing: 22) {
-            HStack(alignment: .top, spacing: 14) {
-                VStack(alignment: .leading, spacing: 10) {
-                    skeletonBar(width: 210, height: 28)
-                    skeletonBar(width: 140, height: 16)
-                }
-
-                Spacer()
-
-                Circle()
-                    .fill(.black.opacity(0.08))
-                    .frame(width: 44, height: 44)
-            }
-
-            VStack(alignment: .leading, spacing: 12) {
-                skeletonBar(width: 260, height: 58)
-                skeletonBar(width: 180, height: 58)
-                skeletonBar(width: 230, height: 22)
-            }
-        }
-        .padding(PencilRectangle.contentInset)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .frame(maxHeight: .infinity, alignment: .topLeading)
-        .background { NotebookRules(seed: PencilRectangle.placeholderSeed) }
-        .background(.white.opacity(0.5), in: PencilRectangleShape(seed: PencilRectangle.placeholderSeed))
-        .clipShape(PencilRectangleShape(seed: PencilRectangle.placeholderSeed))
-        .overlay(
-            PencilRectangle(seed: PencilRectangle.placeholderSeed)
-        )
-        .redacted(reason: .placeholder)
-        .accessibilityLabel(loadingLabel)
+        WritingWave()
+            .frame(height: 32)
+            .padding(PencilRectangle.contentInset)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(maxHeight: .infinity, alignment: .center)
+            .background { NotebookRules(seed: PencilRectangle.placeholderSeed) }
+            .background(Color.chineseRoomCard, in: PencilRectangleShape(seed: PencilRectangle.placeholderSeed))
+            .clipShape(PencilRectangleShape(seed: PencilRectangle.placeholderSeed))
+            .overlay(
+                PencilRectangle(seed: PencilRectangle.placeholderSeed)
+            )
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(loadingLabel)
     }
+}
 
-    private func skeletonBar(width: CGFloat, height: CGFloat) -> some View {
-        RoundedRectangle(cornerRadius: min(height / 2, 8))
-            .fill(.black.opacity(0.12))
-            .frame(width: width, height: height)
+/// Repeatedly writes a pen-like wave from the left; it fades before starting over.
+private struct WritingWave: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.scenePhase) private var scenePhase
+    @State private var startedAt = Date()
+    @State private var seed = UInt64.random(in: .min ... .max)
+
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1.0 / 60, paused: reduceMotion || scenePhase != .active)) { context in
+            let elapsed = max(0, context.date.timeIntervalSince(startedAt))
+            let phase = elapsed.truncatingRemainder(dividingBy: 2)
+            let progress = reduceMotion ? 1 : min(1, phase / 1.25)
+            let opacity = reduceMotion || phase < 1.6 ? 1 : max(0, 1 - (phase - 1.6) / 0.2)
+            WritingWaveShape(seed: seed &+ (reduceMotion ? 0 : UInt64(elapsed / 2)))
+                .trim(from: 0, to: progress)
+                .stroke(Color.chineseRoomInk, style: StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round))
+                .opacity(opacity * 0.5)
+                .padding(.horizontal, 2)
+        }
+        .onAppear { startedAt = .now }
+        .allowsHitTesting(false)
+    }
+}
+
+private struct WritingWaveShape: Shape {
+    let seed: UInt64
+
+    func path(in rect: CGRect) -> Path {
+        guard rect.width > 0, rect.height > 0 else { return Path() }
+        let amplitude = min(9, rect.height * 0.3)
+        var random = WritingWaveRandom(state: seed)
+        var path = Path()
+        var point = CGPoint(x: rect.minX, y: rect.midY)
+        var direction: CGFloat = random.unit() < 0.5 ? -1 : 1
+        path.move(to: point)
+        while point.x < rect.maxX {
+            let next = CGPoint(
+                x: min(rect.maxX, point.x + 16 + random.unit() * 16),
+                y: rect.midY + direction * amplitude * (0.45 + random.unit() * 0.55)
+            )
+            let controlX = (point.x + next.x) / 2
+            path.addCurve(to: next,
+                          control1: CGPoint(x: controlX, y: point.y),
+                          control2: CGPoint(x: controlX, y: next.y))
+            point = next
+            direction *= -1
+        }
+        return path
+    }
+}
+
+private struct WritingWaveRandom {
+    var state: UInt64
+
+    mutating func unit() -> CGFloat {
+        state &+= 0x9E3779B97F4A7C15
+        var value = state
+        value = (value ^ (value >> 30)) &* 0xBF58476D1CE4E5B9
+        value = (value ^ (value >> 27)) &* 0x94D049BB133111EB
+        value ^= value >> 31
+        return CGFloat(value >> 11) / CGFloat(UInt64(1) << 53)
     }
 }
 
@@ -656,6 +696,7 @@ private struct SettingsView: View {
     @State private var voicePreviewTask: Task<Void, Never>?
     @State private var isPreparingVoicePreview = false
     @State private var selectedVoiceIdentifier: String?
+    @AppStorage(AppAppearance.storageKey) private var appearance = AppAppearance.system
     let store: MessageStore
     private var appStrings: AppStrings { AppLocale.forLanguage(source).strings }
 
@@ -740,6 +781,17 @@ private struct SettingsView: View {
                     if let voicePreviewError {
                         Text(voicePreviewError).appFont(.footnote).foregroundStyle(.red)
                     }
+                }
+
+                Section {
+                    Picker(appStrings.appearanceTitle, selection: $appearance) {
+                        ForEach(AppAppearance.allCases) { option in
+                            Text(appStrings.appearanceName(option)).appFont(.body).tag(option)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                } header: {
+                    Text(appStrings.appearanceTitle).appFont(.footnote)
                 }
             }
             .navigationTitle(appStrings.settingsTitle)
@@ -913,7 +965,7 @@ private final class DictationPressControl: UIControl {
         isAccessibilityElement = true
         accessibilityTraits = .button
         isMultipleTouchEnabled = false
-        backgroundColor = .black
+        backgroundColor = .chineseRoomInk
         icon.image = microphoneImage
         icon.preferredSymbolConfiguration = UIImage.SymbolConfiguration(pointSize: 22, weight: .regular)
         icon.contentMode = .scaleAspectFit
@@ -1008,7 +1060,7 @@ private final class DictationPressControl: UIControl {
         held = false
         pressID = UUID()
         UIView.performWithoutAnimation {
-            backgroundColor = .black
+            backgroundColor = .chineseRoomInk
             icon.image = microphoneImage
         }
         onRelease?(cancelled)
