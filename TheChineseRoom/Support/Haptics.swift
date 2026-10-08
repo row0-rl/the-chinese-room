@@ -18,7 +18,7 @@ enum Haptics {
     }
 }
 
-/// One sustained, low-sharpness rumble while the user's finger drags the card.
+/// A coarse, pulsing rumble while the user's finger drags the card.
 @MainActor
 final class CardDragHaptics {
     private let supported = CHHapticEngine.capabilitiesForHardware().supportsHaptics
@@ -88,15 +88,32 @@ final class CardDragHaptics {
     private func playRumbleIfNeeded() {
         guard wantsRumble, isRunning, player == nil, let engine else { return }
         do {
-            let duration: TimeInterval = 30
-            let event = CHHapticEvent(eventType: .hapticContinuous, parameters: [
-                CHHapticEventParameter(parameterID: .hapticIntensity, value: 0.3),
-                CHHapticEventParameter(parameterID: .hapticSharpness, value: 0.15)
-            ], relativeTime: 0, duration: duration)
-            let pattern = try CHHapticPattern(events: [event], parameters: [])
+            let pulseInterval: TimeInterval = 0.08
+            let pulseCount = 32
+            var events: [CHHapticEvent] = []
+            var pulses: [CHHapticParameterCurve] = []
+            // Schedule variation on the haptic engine, without a UI timer.
+            // A fresh randomized sequence is built for each drag, then loops for long holds.
+            for index in 0..<pulseCount {
+                let start = Double(index) * pulseInterval
+                let strength = Float.random(in: 0.40...0.50)
+                events.append(CHHapticEvent(eventType: .hapticContinuous, parameters: [
+                    CHHapticEventParameter(parameterID: .hapticIntensity, value: strength),
+                    CHHapticEventParameter(parameterID: .hapticSharpness, value: 0.25)
+                ], relativeTime: start, duration: pulseInterval))
+                // Keep the bump and trough proportional to the pulse interval.
+                pulses.append(CHHapticParameterCurve(parameterID: .hapticIntensityControl, controlPoints: [
+                    .init(relativeTime: 0, value: 0.2),
+                    .init(relativeTime: pulseInterval * 0.1, value: 1),
+                    .init(relativeTime: pulseInterval * 0.35, value: 1),
+                    .init(relativeTime: pulseInterval * 0.65, value: 0.2),
+                    .init(relativeTime: pulseInterval, value: 0.2)
+                ], relativeTime: start))
+            }
+            let pattern = try CHHapticPattern(events: events, parameterCurves: pulses)
             let player = try engine.makeAdvancedPlayer(with: pattern)
             player.loopEnabled = true
-            player.loopEnd = duration
+            player.loopEnd = Double(pulseCount) * pulseInterval
             try player.start(atTime: CHHapticTimeImmediate)
             self.player = player
         } catch {
