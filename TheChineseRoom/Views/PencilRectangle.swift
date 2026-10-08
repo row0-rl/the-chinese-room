@@ -4,6 +4,9 @@ import SwiftUI
 /// PencilKit supplies the graphite grain; seeded geometry supplies the hand-drawn outline.
 struct PencilRectangle: View {
     static let contentInset: CGFloat = 32
+    // Keep the exact top/bottom pencil marks when the paper changes height.
+    fileprivate static let referenceHeight: CGFloat = 180
+    fileprivate static let capHeight: CGFloat = 44
     static let placeholderSeed = UUID(uuid: (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0))
     let seed: UUID
     var cornerRadius: CGFloat = 8
@@ -18,7 +21,7 @@ struct PencilRectangle: View {
         GeometryReader { geometry in
             let request = PencilBorderRequest(
                 seed: seed,
-                size: geometry.size,
+                size: CGSize(width: geometry.size.width, height: Self.referenceHeight),
                 scale: displayScale,
                 cornerRadius: cornerRadius,
                 cornerJitter: cornerJitter,
@@ -29,14 +32,15 @@ struct PencilRectangle: View {
                 if let renderedBorder, renderedBorder.seed == seed {
                     Image(uiImage: renderedBorder.image)
                         .renderingMode(.template)
-                        .resizable()
+                        .resizable(capInsets: EdgeInsets(top: Self.capHeight, leading: 0, bottom: Self.capHeight, trailing: 0))
                         .foregroundStyle(Color.chineseRoomInk)
                         .frame(width: geometry.size.width, height: geometry.size.height)
                 }
             }
             .frame(width: geometry.size.width, height: geometry.size.height)
             .task(id: request) {
-                // Keep the previous image through layout animations. Rasterize the settled size.
+                // Height is handled by the stretchable middle, so growing the card
+                // never rerasterizes or stretches its top edge and corners.
                 if renderedBorder != nil {
                     do { try await Task.sleep(for: .milliseconds(40)) }
                     catch { return }
@@ -98,10 +102,10 @@ struct PencilRectangleShape: Shape {
 
     func path(in rect: CGRect) -> Path {
         let request = PencilBorderRequest(
-            seed: seed, size: rect.size, scale: 1,
+            seed: seed, size: CGSize(width: rect.width, height: PencilRectangle.referenceHeight), scale: 1,
             cornerRadius: cornerRadius, cornerJitter: cornerJitter, lineWidth: lineWidth, wobble: wobble
         )
-        return PencilBorderDrawing.outlinePath(for: request)
+        return PencilBorderDrawing.outlinePath(for: request, height: rect.height)
             .offsetBy(dx: rect.minX, dy: rect.minY)
     }
 }
@@ -157,13 +161,26 @@ private enum PencilBorderDrawing {
                        wobble: min(request.wobble, min(rect.width, rect.height) * 0.08), random: &random)
     }
 
-    static func outlinePath(for request: PencilBorderRequest) -> Path {
+    static func outlinePath(for request: PencilBorderRequest, height: CGFloat) -> Path {
         var random = generator(seed: request.seed)
         let samples = samples(for: request, random: &random)
+        let cap = PencilRectangle.capHeight
+        let targetCap = min(cap, height / 2)
+        func resized(_ point: CGPoint) -> CGPoint {
+            let y: CGFloat
+            if point.y <= cap {
+                y = point.y * targetCap / cap
+            } else if point.y >= request.size.height - cap {
+                y = height - (request.size.height - point.y) * targetCap / cap
+            } else {
+                y = targetCap + (point.y - cap) * (height - targetCap * 2) / (request.size.height - cap * 2)
+            }
+            return CGPoint(x: point.x, y: y)
+        }
         return Path { path in
             guard let first = samples.first else { return }
-            path.move(to: first.point)
-            for sample in samples.dropFirst() { path.addLine(to: sample.point) }
+            path.move(to: resized(first.point))
+            for sample in samples.dropFirst() { path.addLine(to: resized(sample.point)) }
             path.closeSubpath()
         }
     }

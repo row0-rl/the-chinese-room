@@ -17,76 +17,67 @@ struct MessageCard: View {
     @State private var showsAnnotations = false
 
     var body: some View {
-        CappedCardScroll(maximumHeight: maximumHeight, resetScroll: !isCurrentCard) {
-            MessageCardRevealLayout(progress: revealProgress, edge: previewEdge, visibleHeight: max(0, maximumHeight - PencilRectangle.contentInset * 2)) {
-                InkText(message.normalizedSourceText)
-                    .appFont(.title3)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+        MessageCardRevealLayout(progress: revealProgress, edge: previewEdge, visibleHeight: max(0, maximumHeight - PencilRectangle.contentInset * 2)) {
+            InkText(message.normalizedSourceText)
+                .appFont(.title3)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
 
-                VStack(alignment: .leading, spacing: 22) {
-                    VStack(alignment: .leading, spacing: 14) {
-                        if showsAnnotations {
-                            alignedChunks
-                        } else {
-                            targetText
-                        }
-                        if showsAnnotations && (isLoadingPronunciation || isLoadingHanja) {
-                            ProgressView()
-                        }
-                        if showsAnnotations && hanjaFailed {
-                            InkText(appStrings.hanjaUnavailable)
-                                .appFont(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                        if showsAnnotations && pronunciationFailed {
-                            InkText(appStrings.pronunciationUnavailable)
-                                .appFont(.caption)
-                                .foregroundStyle(.secondary)
-                        }
+            VStack(alignment: .leading, spacing: 22) {
+                VStack(alignment: .leading, spacing: 14) {
+                    if showsAnnotations {
+                        alignedChunks
+                    } else {
+                        targetText
                     }
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        toggleAnnotationsAndPlay()
+                    if showsAnnotations && (isLoadingPronunciation || isLoadingHanja) {
+                        ProgressView()
                     }
-                    .accessibilityElement(children: .combine)
-                    .accessibilityAddTraits(.isButton)
-                    .accessibilityAction {
-                        toggleAnnotationsAndPlay()
+                    if showsAnnotations && hanjaFailed {
+                        InkText(appStrings.hanjaUnavailable)
+                            .appFont(.caption)
+                            .foregroundStyle(.secondary)
                     }
-
-                    if let examples = message.examples, !examples.isEmpty {
-                        VStack(alignment: .leading, spacing: 12) {
-                            InkText(appStrings.examplesTitle)
-                                .appFont(.headline)
-                            ForEach(examples) { example in
-                                VStack(alignment: .leading, spacing: 4) {
-                                    InkText(example.sourceText)
-                                        .appFont(.subheadline)
-                                    InkText(example.targetText)
-                                        .appFont(.subheadline)
-                                }
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                            }
-                        }
+                    if showsAnnotations && pronunciationFailed {
+                        InkText(appStrings.pronunciationUnavailable)
+                            .appFont(.caption)
+                            .foregroundStyle(.secondary)
                     }
-
                 }
-                .frame(maxWidth: .infinity, alignment: .topLeading)
-                .clipped()
-                .opacity(Double(revealProgress * revealProgress))
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    toggleAnnotationsAndPlay()
+                }
+                .accessibilityElement(children: .combine)
+                .accessibilityAddTraits(.isButton)
+                .accessibilityAction {
+                    toggleAnnotationsAndPlay()
+                }
+
+                if let examples = message.examples, !examples.isEmpty {
+                    VStack(alignment: .leading, spacing: 12) {
+                        InkText(appStrings.examplesTitle)
+                            .appFont(.headline)
+                        ForEach(examples) { example in
+                            VStack(alignment: .leading, spacing: 4) {
+                                InkText(example.sourceText)
+                                    .appFont(.subheadline)
+                                InkText(example.targetText)
+                                    .appFont(.subheadline)
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                    }
+                }
 
             }
-            .padding(PencilRectangle.contentInset)
             .frame(maxWidth: .infinity, alignment: .topLeading)
+            .clipped()
+            .opacity(Double(revealProgress * revealProgress))
+
         }
-        .background { NotebookRules(seed: message.id) }
-        .background(Color.chineseRoomCard, in: PencilRectangleShape(seed: message.id))
-        .clipShape(PencilRectangleShape(seed: message.id))
-        .overlay(
-            PencilRectangle(seed: message.id)
-        )
-        .clipped()
+        .padding(PencilRectangle.contentInset)
+        .frame(maxWidth: .infinity, alignment: .topLeading)
         .onChange(of: isCurrentCard) { _, isCurrent in
             if !isCurrent {
                 showsAnnotations = false
@@ -336,12 +327,29 @@ private struct MessageCardRevealLayout: Layout {
     }
 }
 
+/// One piece of paper survives loading, dictation and the finished message.
+struct MessagePaper<Content: View>: View {
+    let seed: UUID
+    let maximumHeight: CGFloat
+    var resetScroll = false
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        CappedCardScroll(maximumHeight: maximumHeight, resetScroll: resetScroll, content: content)
+            .background { NotebookRules(seed: seed) }
+            .background(Color.chineseRoomCard, in: PencilRectangleShape(seed: seed))
+            .clipShape(PencilRectangleShape(seed: seed))
+            .overlay(PencilRectangle(seed: seed))
+    }
+}
+
 /// Measures intrinsic content height so short cards stay compact. Only overflow scrolls.
 struct CappedCardScroll<Content: View>: View {
     let maximumHeight: CGFloat
     var resetScroll = false
     @ViewBuilder let content: () -> Content
     @State private var contentHeight: CGFloat = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         ScrollViewReader { reader in
@@ -349,9 +357,18 @@ struct CappedCardScroll<Content: View>: View {
                 content()
                     .fixedSize(horizontal: false, vertical: true)
                     .id("card-top")
-                    .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { contentHeight = $0 }
+                    .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height in
+                        guard contentHeight != height else { return }
+                        if contentHeight == 0 || reduceMotion {
+                            contentHeight = height
+                        } else {
+                            // The paper extends below its local top; the centered parent
+                            // smoothly lifts it by half the added height at the same time.
+                            withAnimation(.smooth(duration: 0.45)) { contentHeight = height }
+                        }
+                    }
             }
-            .frame(height: min(maximumHeight, contentHeight > 0 ? contentHeight : maximumHeight))
+            .frame(height: min(maximumHeight, contentHeight > 0 ? contentHeight : 120))
             .scrollDisabled(contentHeight <= maximumHeight || resetScroll)
             .scrollBounceBehavior(.basedOnSize)
             .onChange(of: resetScroll) { _, reset in

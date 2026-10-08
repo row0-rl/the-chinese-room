@@ -1,6 +1,9 @@
 import Foundation
 import SwiftData
 
+// The appearance UI lives in UIKit; this harness only needs its option names.
+enum AppAppearance { case system, light, dark }
+
 // Replace hardware adapters only; exercise the production store and queue.
 typealias OnDeviceSpeechService = SilentSpeechService
 typealias SystemDictationService = UnavailableDictationService
@@ -78,12 +81,12 @@ actor ControlledMessages: MessageService {
 }
 
 @main struct MessageLifecycleRegression {
-    @MainActor static func waitUntil(_ predicate: () async -> Bool) async {
+    @MainActor static func waitUntil(file: StaticString = #filePath, line: UInt = #line, _ predicate: () async -> Bool) async {
         for _ in 0..<10000 {
             if await predicate() { return }
             await Task.yield()
         }
-        preconditionFailure("Lifecycle transition did not complete")
+        preconditionFailure("Lifecycle transition did not complete", file: file, line: line)
     }
     @MainActor static func main() async throws {
         // Release during suspended startup cancels, never finishes a nonexistent recording.
@@ -202,7 +205,9 @@ actor ControlledMessages: MessageService {
         // Submitting while visible generation owns the queue must not cancel it.
         let messages = ControlledMessages()
         let store = MessageStore(service: messages)
+        let loadingPaperID = store.nextRandomCardID
         store.showBlankNextMessage()
+        precondition(store.nextRandomCardID == loadingPaperID)
         let visible = Task { await store.finishBlankNextMessage() }
         await waitUntil { await messages.count == 1 }
         await store.submit("hello")
@@ -224,6 +229,11 @@ actor ControlledMessages: MessageService {
         await retry.value
         precondition(!store.isShowingBlankCard && !store.isGenerating)
         precondition(store.messages.count == 2)
+        precondition(store.currentMessage.id == loadingPaperID,
+                     "The completed message must keep the loading card's paper ID")
+        precondition(store.nextRandomCardID != loadingPaperID,
+                     "The following card must have its own paper")
+        print("PASS: loading paper retains its identity through failure, retry, and completion")
 
         // Startup prefetch cancellation must not recursively restart itself.
         let background = ControlledMessages()
@@ -325,6 +335,7 @@ actor ControlledMessages: MessageService {
         let eagerService = ControlledMessages()
         let eagerStore = MessageStore(service: eagerService)
         eagerStore.attachPersistence(container.mainContext)
+        let previewPaperID = eagerStore.nextRandomCardID
         await waitUntil { await eagerService.ipaRequests == 1 }
         await waitUntil { await eagerService.count == 1 }
         await eagerService.completeIPA([])
@@ -333,6 +344,7 @@ actor ControlledMessages: MessageService {
         await waitUntil { eagerStore.nextCardMessage != nil }
         await waitUntil { await eagerService.ipaRequests == 2 }
         let preparedID = eagerStore.nextCardMessage!.id
+        precondition(preparedID == previewPaperID, "Prefetch must fill the existing preview paper")
         let preparedIPA = [IPAPronunciationUnit(surface: eagerStore.nextCardMessage!.targetText, ipa: "tɛst")]
         await eagerService.completeIPA(preparedIPA)
         await waitUntil { eagerStore.nextCardMessage?.ipaPronunciation == preparedIPA }

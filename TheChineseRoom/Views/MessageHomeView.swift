@@ -27,13 +27,7 @@ struct MessageHomeView: View {
                 let cardViewportHeight = cardViewportHeight(in: proxy.size.height)
 
                 VStack(spacing: 0) {
-                    Group {
-                        if let pending = store.pendingDictationText {
-                            pendingDictationCard(text: pending, height: cardViewportHeight)
-                        } else {
-                            cardStack(height: cardViewportHeight)
-                        }
-                    }
+                    cardStack(height: cardViewportHeight)
                     .padding(.horizontal, 20)
 
                     Spacer(minLength: 8)
@@ -137,39 +131,6 @@ struct MessageHomeView: View {
         return max(0, availableHeight - reservedHeight)
     }
 
-    private func pendingDictationCard(text: String, height: CGFloat) -> some View {
-        let seed = store.pendingDictationID
-        return ZStack(alignment: .top) {
-            MessageTitlePreview(title: store.currentMessage.normalizedSourceText,
-                loadingLabel: appStrings.loadingMessageLabel, edge: .bottom)
-                .frame(height: 56)
-            CappedCardScroll(maximumHeight: maximumCardHeight(in: height)) {
-                VStack(alignment: .leading, spacing: 22) {
-                    if text.isEmpty {
-                        WritingWave()
-                            .frame(width: 180, height: 24)
-                    } else {
-                        InkText(MessagePunctuation.clean(text))
-                            .appFont(.title3)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                    WritingWave()
-                        .frame(height: 64)
-                        .accessibilityLabel(appStrings.loadingMessageLabel)
-                }
-                .padding(PencilRectangle.contentInset)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            .background { NotebookRules(seed: seed) }
-            .background(Color.chineseRoomCard, in: PencilRectangleShape(seed: seed))
-            .clipShape(PencilRectangleShape(seed: seed))
-            .overlay(PencilRectangle(seed: seed))
-            .frame(height: height, alignment: .center)
-        }
-        .frame(height: height)
-        .clipped()
-    }
-
     private func cardStack(height: CGFloat) -> some View {
         GeometryReader { proxy in
             let viewportHeight = proxy.size.height
@@ -179,43 +140,38 @@ struct MessageHomeView: View {
             let progress = min(1, abs(cardDragOffset) / max(1, destination == -1 ? previousStride : nextStride))
 
             ZStack {
-                ForEach(visibleCards, id: \.message.id) { card in
-                    let restingOffset = cardPosition(card.position, viewportHeight: viewportHeight)
-                    let destinationOffset = cardPosition(card.position, centeredAt: destination, viewportHeight: viewportHeight)
+                ForEach(visibleCards) { card in
+                    let restingOffset = cardPlacementOffset(card.position, viewportHeight: viewportHeight)
+                    let destinationOffset = cardPlacementOffset(card.position, centeredAt: destination, viewportHeight: viewportHeight)
                     let offset = restingOffset + (destinationOffset - restingOffset) * progress
-                    messageCard(
-                        card.message,
-                        revealProgress: card.position == 0 ? 1 - progress : (card.position == destination ? progress : 0),
-                        previewEdge: offset < 0 ? .bottom : .top,
-                        maximumHeight: maximumCardHeight(in: viewportHeight)
-                    )
+                    MessagePaper(seed: card.id, maximumHeight: maximumCardHeight(in: viewportHeight), resetScroll: card.position != 0) {
+                        Group {
+                            if let message = card.message {
+                                messageCard(
+                                    message,
+                                    revealProgress: card.position == 0 ? 1 - progress : (card.position == destination ? progress : 0),
+                                    previewEdge: offset < 0 ? .bottom : .top,
+                                    maximumHeight: maximumCardHeight(in: viewportHeight)
+                                )
+                                .transition(.opacity)
+                            } else {
+                                loadingCardContent(text: card.dictationText)
+                                    .transition(.opacity)
+                            }
+                        }
+                        .animation(.easeOut(duration: 0.2), value: card.message != nil)
+                    }
                     .frame(width: proxy.size.width)
                     .fixedSize(horizontal: false, vertical: true)
                     .onGeometryChange(for: CGFloat.self) { geometry in
                         geometry.size.height
                     } action: { height in
-                        cardHeights[card.message.id] = height
+                        cardHeights[card.id] = height
                     }
+                    .frame(height: viewportHeight, alignment: card.position > 0 ? .top : (card.position < 0 ? .bottom : .center))
                     .offset(y: offset)
-                    .allowsHitTesting(card.position == 0 && !isPaging)
+                    .allowsHitTesting(card.position == 0 && !isPaging && store.pendingDictationText == nil)
                     .accessibilityHidden(card.position != 0)
-                }
-
-                if store.isShowingBlankCard {
-                    MessageSkeletonCard(loadingLabel: appStrings.loadingMessageLabel)
-                        .frame(width: proxy.size.width, height: 120)
-                        .offset(y: cardDragOffset)
-                }
-
-                ForEach(1...2, id: \.self) { position in
-                    if store.cardMessage(at: position) == nil {
-                        nextCard
-                            .frame(width: proxy.size.width, height: 120)
-                            .offset(y: cardPosition(position, viewportHeight: viewportHeight) * (1 - progress)
-                                + cardPosition(position, centeredAt: destination, viewportHeight: viewportHeight) * progress)
-                            .allowsHitTesting(false)
-                            .accessibilityHidden(true)
-                    }
                 }
             }
             .frame(width: proxy.size.width, height: viewportHeight)
@@ -225,12 +181,12 @@ struct MessageHomeView: View {
             .simultaneousGesture(
                 DragGesture(minimumDistance: 12)
                     .updating($isDraggingCard) { value, dragging, _ in
-                        if !isPaging && !scrollsInsideCard(value.startLocation, viewportHeight: viewportHeight) {
+                        if store.pendingDictationText == nil && !isPaging && !scrollsInsideCard(value.startLocation, viewportHeight: viewportHeight) {
                             dragging = true
                         }
                     }
                     .onChanged { value in
-                        guard !isPaging, !scrollsInsideCard(value.startLocation, viewportHeight: viewportHeight) else { return }
+                        guard store.pendingDictationText == nil, !isPaging, !scrollsInsideCard(value.startLocation, viewportHeight: viewportHeight) else { return }
                         let translation = value.translation.height
                         // Resist dragging beyond the available history.
                         if translation > 0, store.previousCardMessage == nil {
@@ -241,7 +197,7 @@ struct MessageHomeView: View {
                         if cardDragOffset != 0 { cardDragHaptics.beginRumble() }
                     }
                     .onEnded { value in
-                        guard !isPaging, !scrollsInsideCard(value.startLocation, viewportHeight: viewportHeight) else { return }
+                        guard store.pendingDictationText == nil, !isPaging, !scrollsInsideCard(value.startLocation, viewportHeight: viewportHeight) else { return }
                         cardDragHaptics.stopRumble()
                         Haptics.messageChanged()
                         let projectedOffset = value.predictedEndTranslation.height
@@ -289,17 +245,88 @@ struct MessageHomeView: View {
         return CGFloat(direction) * distance
     }
 
-    private func cardHeight(at position: Int) -> CGFloat {
-        guard let message = store.cardMessage(at: position) else { return 120 }
-        return cardHeights[message.id] ?? 180
+    /// Preview cards grow away from the visible edge. Their fixed viewport-sized
+    /// wrapper keeps resizing separate from the pager's travel to the center.
+    private func cardPlacementOffset(_ position: Int, centeredAt center: Int = 0, viewportHeight: CGFloat) -> CGFloat {
+        let anchor: CGFloat = position > 0 ? 0 : (position < 0 ? 1 : 0.5)
+        let relativePosition = position - center
+        if relativePosition == 0 {
+            return (viewportHeight - cardHeight(at: position)) * (0.5 - anchor)
+        }
+
+        let direction = relativePosition > 0 ? 1 : -1
+        var edge: CGFloat = direction > 0 ? viewportHeight - 56 : 56
+        if abs(relativePosition) > 1 {
+            for step in 1..<abs(relativePosition) {
+                edge += CGFloat(direction) * (cardHeight(at: center + step * direction) + 12)
+            }
+        }
+        // At rest the next card's top is exactly viewportHeight - 56, regardless
+        // of either its measured height or its animated presentation height.
+        if direction > 0, anchor == 0 { return edge }
+        if direction < 0, anchor == 1 { return edge - viewportHeight }
+        let height = cardHeight(at: position)
+        let top = direction > 0 ? edge : edge - height
+        return top - anchor * (viewportHeight - height)
     }
 
-    private var visibleCards: [(message: LearningMessage, position: Int)] {
-        (-2...2).compactMap { position in
-            guard !(position == 0 && store.isShowingBlankCard),
-                  let message = store.cardMessage(at: position) else { return nil }
-            return (message, position)
+    private func cardHeight(at position: Int) -> CGFloat {
+        guard let card = visibleCards.first(where: { $0.position == position }) else { return 120 }
+        return cardHeights[card.id] ?? (card.message == nil ? 120 : 180)
+    }
+
+    private var visibleCards: [PresentedMessageCard] {
+        let isDictation = store.pendingDictationText != nil
+        let isPending = isDictation || store.isShowingBlankCard
+        return (-2...2).compactMap { position in
+            if position == 0, isPending {
+                return PresentedMessageCard(
+                    id: isDictation ? store.pendingDictationID : store.nextRandomCardID,
+                    position: position, dictationText: store.pendingDictationText
+                )
+            }
+            let sourcePosition = isPending && position < 0 ? position + 1 : position
+            if !(isPending && position > 0), let message = store.cardMessage(at: sourcePosition) {
+                return PresentedMessageCard(id: message.id, position: position, message: message)
+            }
+            guard position > 0 else { return nil }
+            let precedingMessage = store.cardMessage(at: position - 1)
+            // Once prepared, the preceding card already owns nextRandomCardID.
+            // Its following placeholder must keep a separate identity.
+            let isNextPaper = (!isPending && precedingMessage != nil && precedingMessage?.id != store.nextRandomCardID)
+                || (isDictation && position == 1)
+            return PresentedMessageCard(
+                id: isNextPaper ? store.nextRandomCardID : Self.previewPaperIDs[position - 1],
+                position: position
+            )
         }
+    }
+
+    private static let previewPaperIDs = [
+        UUID(uuidString: "00000000-0000-0000-0000-000000000001")!,
+        UUID(uuidString: "00000000-0000-0000-0000-000000000002")!
+    ]
+
+    private func loadingCardContent(text: String?) -> some View {
+        VStack(alignment: .leading, spacing: 22) {
+            if let text {
+                if text.isEmpty {
+                    WritingWave().frame(width: 180, height: 24)
+                } else {
+                    InkText(MessagePunctuation.clean(text))
+                        .appFont(.title3)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                WritingWave().frame(height: 64)
+                    .accessibilityLabel(appStrings.loadingMessageLabel)
+            } else {
+                WritingWave().frame(height: 32)
+                    .frame(height: 56, alignment: .top)
+                    .accessibilityLabel(appStrings.loadingMessageLabel)
+            }
+        }
+        .padding(PencilRectangle.contentInset)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func messageCard(
@@ -328,10 +355,6 @@ struct MessageHomeView: View {
             revealProgress: revealProgress,
             previewEdge: previewEdge
         )
-    }
-
-    private var nextCard: some View {
-        MessageTitlePreview(title: nil, loadingLabel: store.isPreparingNextRandom || store.isGenerating ? appStrings.loadingMessageLabel : appStrings.nextMessageLabel, edge: .top)
     }
 
     private var cardStackFadeMask: some View {
@@ -572,56 +595,11 @@ private enum CardPagerPage: Hashable {
     case next
 }
 
-/// Neighbors contain only one title, anchored inside the visible 64-point edge.
-/// Full message content is introduced when paging commits, without a crossfade.
-private struct MessageTitlePreview: View {
-    let title: String?
-    let loadingLabel: String
-    let edge: VerticalEdge
-
-    var body: some View {
-        Group {
-            if let title {
-                Text(title)
-                    .appFont(.title3)
-                    .lineLimit(1)
-                    .foregroundStyle(Color.chineseRoomInk)
-            } else {
-                WritingWave()
-                    .frame(height: 24)
-                    .accessibilityLabel(loadingLabel)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(PencilRectangle.contentInset)
-        .frame(maxWidth: .infinity, maxHeight: .infinity,
-               alignment: edge == .top ? .topLeading : .bottomLeading)
-        .background { NotebookRules(seed: PencilRectangle.placeholderSeed) }
-        .background(Color.chineseRoomCard, in: PencilRectangleShape(seed: PencilRectangle.placeholderSeed))
-        .clipShape(PencilRectangleShape(seed: PencilRectangle.placeholderSeed))
-        .overlay(
-            PencilRectangle(seed: PencilRectangle.placeholderSeed)
-        )
-    }
-}
-
-private struct MessageSkeletonCard: View {
-    let loadingLabel: String
-    var body: some View {
-        WritingWave()
-            .frame(height: 32)
-            .padding(PencilRectangle.contentInset)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .frame(maxHeight: .infinity, alignment: .center)
-            .background { NotebookRules(seed: PencilRectangle.placeholderSeed) }
-            .background(Color.chineseRoomCard, in: PencilRectangleShape(seed: PencilRectangle.placeholderSeed))
-            .clipShape(PencilRectangleShape(seed: PencilRectangle.placeholderSeed))
-            .overlay(
-                PencilRectangle(seed: PencilRectangle.placeholderSeed)
-            )
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel(loadingLabel)
-    }
+private struct PresentedMessageCard: Identifiable {
+    let id: UUID
+    let position: Int
+    var message: LearningMessage?
+    var dictationText: String?
 }
 
 /// Repeatedly writes a pen-like wave from the left; it fades before starting over.

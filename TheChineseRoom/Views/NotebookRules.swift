@@ -13,18 +13,22 @@ struct NotebookRules: View {
 
     var body: some View {
         GeometryReader { geometry in
-            let request = NotebookRuleRequest(seed: seed, size: geometry.size, scale: scale,
-                                              interval: interval, lineWidth: lineWidth, wiggle: wiggle)
+            // Render the page once and reveal more rows as it grows. Existing
+            // ruling stays at the same distance from the top, with identical grain.
+            let pageSize = CGSize(width: geometry.size.width, height: max(520, geometry.size.height))
+            let request = NotebookRuleRequest(seed: seed, size: pageSize, scale: scale,
+                                             interval: interval, lineWidth: lineWidth, wiggle: wiggle)
             ZStack {
                 if let image {
                     Image(uiImage: image)
                         .renderingMode(.template)
                         .resizable()
                         .foregroundStyle(Color.chineseRoomRule)
-                        .frame(width: geometry.size.width, height: geometry.size.height)
+                        .frame(width: geometry.size.width, height: request.size.height)
                 }
             }
-            .frame(width: geometry.size.width, height: geometry.size.height)
+            .frame(width: geometry.size.width, height: geometry.size.height, alignment: .top)
+            .clipped()
             .task(id: request) {
                 guard let result = await NotebookRuleRenderer.shared.image(for: request),
                       !Task.isCancelled else { return }

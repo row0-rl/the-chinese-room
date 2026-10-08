@@ -24,6 +24,7 @@ final class MessageStore {
     var pendingDictationID: UUID { dictationRequestID }
     private(set) var isPreparingNextRandom = false
     private(set) var isShowingBlankCard = false
+    private(set) var nextRandomCardID = UUID()
     private(set) var dictatedText = ""
     private(set) var currentLanguageMode: LanguageMode
     private var modelContext: ModelContext?
@@ -270,7 +271,9 @@ final class MessageStore {
                 isShowingBlankCard = false
                 return
             }
-            messages.append(preparedNextRandomMessage?.id == nextMessage.id ? preparedNextRandomMessage! : nextMessage)
+            let completed = preparedNextRandomSourceID == sourceMessage.id
+                ? (preparedNextRandomMessage ?? nextMessage) : nextMessage
+            messages.append(assignCardID(to: completed, id: nextRandomCardID))
             currentIndex = messages.count - 1
             isShowingBlankCard = false
             clearPreparedNextRandomMessage()
@@ -374,7 +377,9 @@ final class MessageStore {
                 isShowingBlankCard = false
                 return
             }
-            messages.append(preparedNextRandomMessage?.id == nextMessage.id ? preparedNextRandomMessage! : nextMessage)
+            let completed = preparedNextRandomSourceID == sourceMessage.id
+                ? (preparedNextRandomMessage ?? nextMessage) : nextMessage
+            messages.append(assignCardID(to: completed, id: nextRandomCardID))
             currentIndex = messages.count - 1
             isShowingBlankCard = false
             clearPreparedNextRandomMessage()
@@ -516,16 +521,7 @@ final class MessageStore {
             guard currentLanguageMode == requestedLanguageMode,
                   dictationID == nil || dictationID == dictationRequestID else { return }
             if let dictationID {
-                // Complete the live card without changing its seeded paper or outline.
-                nextMessage = LearningMessage(
-                    id: dictationID, sourceText: nextMessage.sourceText,
-                    normalizedSourceText: nextMessage.normalizedSourceText,
-                    targetText: nextMessage.targetText, literalMeaning: nextMessage.literalMeaning,
-                    literalChunks: nextMessage.literalChunks, examples: nextMessage.examples,
-                    japanesePronunciation: nextMessage.japanesePronunciation,
-                    ipaPronunciation: nextMessage.ipaPronunciation,
-                    hanjaAnnotations: nextMessage.hanjaAnnotations, audioState: nextMessage.audioState
-                )
+                nextMessage = assignCardID(to: nextMessage, id: dictationID)
             }
             messages.append(preparedNextRandomMessage?.id == nextMessage.id ? preparedNextRandomMessage! : nextMessage)
             currentIndex = messages.count - 1
@@ -565,9 +561,9 @@ final class MessageStore {
                 return
             }
             guard !isGenerating, !isShowingBlankCard, pendingDictationText == nil else { return }
-            preparedNextRandomMessage = nextMessage
+            preparedNextRandomMessage = assignCardID(to: nextMessage, id: nextRandomCardID)
             preparedNextRandomSourceID = sourceMessage.id
-            prepareAnnotations(for: nextMessage.id)
+            prepareAnnotations(for: nextRandomCardID)
         } catch {
             guard currentMessage.id == sourceMessage.id else {
                 Task { await prepareNextRandomMessage() }
@@ -579,7 +575,21 @@ final class MessageStore {
         }
     }
 
+    /// The paper exists before generation; completing it keeps every cached field.
+    private func assignCardID(to message: LearningMessage, id: UUID) -> LearningMessage {
+        LearningMessage(
+            id: id, sourceText: message.sourceText,
+            normalizedSourceText: message.normalizedSourceText,
+            targetText: message.targetText, literalMeaning: message.literalMeaning,
+            literalChunks: message.literalChunks, examples: message.examples,
+            japanesePronunciation: message.japanesePronunciation,
+            ipaPronunciation: message.ipaPronunciation,
+            hanjaAnnotations: message.hanjaAnnotations, audioState: message.audioState
+        )
+    }
+
     private func clearPreparedNextRandomMessage() {
+        nextRandomCardID = UUID()
         preparedNextRandomMessage = nil
         preparedNextRandomSourceID = nil
     }
