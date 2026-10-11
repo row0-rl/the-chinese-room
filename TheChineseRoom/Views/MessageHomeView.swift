@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import PencilKit
 
 struct MessageHomeView: View {
     @Environment(\.scenePhase) private var scenePhase
@@ -461,7 +462,7 @@ struct MessageHomeView: View {
             DictationPressButton(
                 label: appStrings.holdToSpeakLabel,
                 enabled: !store.isGenerating && !store.isTranscribing,
-                foreground: .chineseRoomBackground,
+                foreground: .chineseRoomInk,
                 onPress: {
                     cardDragHaptics.stopRumble()
                     skipNextCardImpact = false
@@ -932,18 +933,24 @@ private final class DictationPressControl: UIControl {
     var onPress: (() -> Void)?
     var onRelease: ((Bool) -> Void)?
     private let icon = UIImageView()
+    private let pencilOutline = UIImageView()
     private let titleLabel = UILabel()
     private let microphoneImage = UIImage(named: "FuzzyMicrophone")?.withRenderingMode(.alwaysTemplate)
     private let feedback = UIImpactFeedbackGenerator(style: .heavy)
     private var held = false
     private var pressID = UUID()
+    private var pencilRequest: PencilButtonRequest?
+    private var pencilTask: Task<Void, Never>?
 
     override init(frame: CGRect) {
         super.init(frame: frame)
         isAccessibilityElement = true
         accessibilityTraits = .button
         isMultipleTouchEnabled = false
-        backgroundColor = .chineseRoomInk
+        backgroundColor = .clear
+        pencilOutline.tintColor = .chineseRoomInk
+        pencilOutline.isUserInteractionEnabled = false
+        pencilOutline.isAccessibilityElement = false
         icon.image = microphoneImage
         icon.preferredSymbolConfiguration = UIImage.SymbolConfiguration(pointSize: 22, weight: .regular)
         icon.contentMode = .scaleAspectFit
@@ -953,6 +960,7 @@ private final class DictationPressControl: UIControl {
         titleLabel.minimumScaleFactor = 0.6
         titleLabel.isUserInteractionEnabled = false
         titleLabel.isAccessibilityElement = false
+        addSubview(pencilOutline)
         addSubview(titleLabel)
         addSubview(icon)
         NotificationCenter.default.addObserver(self, selector: #selector(backgrounded),
@@ -960,6 +968,8 @@ private final class DictationPressControl: UIControl {
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
+    deinit { pencilTask?.cancel() }
 
     func setTitle(_ title: String, font: UIFont) {
         titleLabel.text = title
@@ -975,8 +985,18 @@ private final class DictationPressControl: UIControl {
 
     override func layoutSubviews() {
         super.layoutSubviews()
-        layer.cornerRadius = bounds.height / 2
-        let iconSize = min(28, max(0, bounds.height - 16))
+        pencilOutline.frame = bounds
+        let request = PencilButtonRequest(size: bounds.size, scale: traitCollection.displayScale)
+        if request.pixelWidth > 0, request.pixelHeight > 0, request != pencilRequest {
+            pencilRequest = request
+            pencilTask?.cancel()
+            pencilTask = Task { @MainActor [weak self] in
+                guard let image = await PencilButtonRenderer.shared.image(for: request),
+                      !Task.isCancelled else { return }
+                self?.pencilOutline.image = image.withRenderingMode(.alwaysTemplate)
+            }
+        }
+        let iconSize = min(24, max(0, bounds.height - 16))
         let gap: CGFloat = 8
         let titleWidth = min(ceil(titleLabel.intrinsicContentSize.width), max(0, bounds.width - 32 - gap - iconSize))
         let startX = (bounds.width - titleWidth - gap - iconSize) / 2
@@ -1017,7 +1037,7 @@ private final class DictationPressControl: UIControl {
         pressID = id
         // Update the native layer before scheduling any application work.
         UIView.performWithoutAnimation {
-            backgroundColor = .systemRed
+            pencilOutline.tintColor = .systemRed
             icon.image = UIImage(systemName: "stop.fill")
         }
         #if DEBUG
@@ -1038,7 +1058,7 @@ private final class DictationPressControl: UIControl {
         held = false
         pressID = UUID()
         UIView.performWithoutAnimation {
-            backgroundColor = .chineseRoomInk
+            pencilOutline.tintColor = .chineseRoomInk
             icon.image = microphoneImage
         }
         onRelease?(cancelled)
@@ -1051,4 +1071,72 @@ private final class DictationPressControl: UIControl {
         if held { release(cancelled: false) } else { press() }
         return true
     }
+}
+
+private struct PencilButtonRequest: Hashable, Sendable {
+    let pixelWidth: Int
+    let pixelHeight: Int
+    let scale: CGFloat
+
+    init(size: CGSize, scale: CGFloat) {
+        self.scale = max(1, scale)
+        pixelWidth = Int((max(0, size.width) * self.scale).rounded())
+        pixelHeight = Int((max(0, size.height) * self.scale).rounded())
+    }
+
+    var size: CGSize { CGSize(width: CGFloat(pixelWidth) / scale, height: CGFloat(pixelHeight) / scale) }
+    var key: NSString { "\(pixelWidth):\(pixelHeight):\(scale)" as NSString }
+}
+
+/// One seeded pencil outline, reused for every touch state and reproduced on launch.
+private actor PencilButtonRenderer {
+    static let shared = PencilButtonRenderer()
+    private let cache: NSCache<NSString, UIImage> = {
+        let cache = NSCache<NSString, UIImage>()
+        cache.countLimit = 8
+        cache.totalCostLimit = 4 * 1_024 * 1_024
+        return cache
+    }()
+
+    func image(for request: PencilButtonRequest) -> UIImage? {
+        guard !Task.isCancelled else { return nil }
+        if let image = cache.object(forKey: request.key) { return image }
+        let size = request.size
+        guard size.width > 0, size.height > 0 else { return nil }
+        let outline = PencilRectangle.outlinePath(
+            seed: UUID(uuidString: "7CA953B1-D4E6-408F-8CA9-53B1D4E6208F")!, size: size,
+            cornerRadius: 6, cornerJitter: 1.5, lineWidth: 5, wobble: 1
+        ).cgPath
+        var locations: [CGPoint] = []
+        outline.applyWithBlock { element in
+            switch element.pointee.type {
+            case .moveToPoint, .addLineToPoint: locations.append(element.pointee.points[0])
+            default: break
+            }
+        }
+        if let first = locations.first { locations.append(first) }
+        let points = locations.enumerated().map { index, location in
+            PKStrokePoint(
+                location: location, timeOffset: Double(index) * 0.01,
+                size: CGSize(width: 5, height: 5),
+                opacity: 1, force: 1, azimuth: .pi / 12, altitude: .pi / 2
+            )
+        }
+        let stroke = PKStroke(
+            ink: PKInk(.pencil, color: .black),
+            path: PKStrokePath(controlPoints: points, creationDate: Date(timeIntervalSince1970: 0)),
+            randomSeed: 0xD4E6208F
+        )
+        let image: UIImage? = autoreleasepool {
+            var result: UIImage?
+            UITraitCollection(userInterfaceStyle: .light).performAsCurrent {
+                result = PKDrawing(strokes: [stroke]).image(from: CGRect(origin: .zero, size: size), scale: request.scale)
+            }
+            return result
+        }
+        guard let image, !Task.isCancelled else { return nil }
+        cache.setObject(image, forKey: request.key, cost: request.pixelWidth * request.pixelHeight * 4)
+        return image
+    }
+
 }

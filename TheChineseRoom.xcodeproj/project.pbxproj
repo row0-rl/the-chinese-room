@@ -13,6 +13,8 @@
         F92000000000000000000002 = {isa = XCSwiftPackageProductDependency; package = F92000000000000000000003; productName = FluidAudio; };
 /* End XCSwiftPackageProductDependency section */
 /* Begin PBXBuildFile section */
+        F97000000000000000000001 = {isa = PBXBuildFile; fileRef = F97000000000000000000002; };
+        F97000000000000000000003 = {isa = PBXBuildFile; fileRef = F97000000000000000000004; };
 		D00000000000000000000021 /* NotebookRules.swift in Sources */ = {isa = PBXBuildFile; fileRef = C00000000000000000000021 /* NotebookRules.swift */; };
 		D00000000000000000000020 /* InkText.swift in Sources */ = {isa = PBXBuildFile; fileRef = C00000000000000000000020 /* InkText.swift */; };
 		D00000000000000000000019 /* Xiaolai-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = C00000000000000000000019 /* Xiaolai-Regular.ttf */; };
@@ -57,6 +59,8 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+        F97000000000000000000002 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchTitleView.swift; sourceTree = "<group>"; };
+        F97000000000000000000004 = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
 		C00000000000000000000021 /* NotebookRules.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotebookRules.swift; sourceTree = "<group>"; };
 		C00000000000000000000020 /* InkText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InkText.swift; sourceTree = "<group>"; };
 		C00000000000000000000019 /* Xiaolai-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Resources/Fonts/Xiaolai-Regular.ttf; sourceTree = "<group>"; };
@@ -122,6 +126,7 @@
 				C00000000000000000000107 /* Support */,
 				C00000000000000000000108 /* Views */,
 				A1B2C3D4E5F6000000000004 /* TheChineseRoomApp.swift */,
+                F97000000000000000000004,
 				E12000000000000000000002 /* Interface.xcstrings */,
 				C00000000000000000000017 /* PatrickHand-Regular.ttf */,
 				C00000000000000000000019 /* Xiaolai-Regular.ttf */,
@@ -227,6 +232,7 @@
 				C00000000000000000000018 /* AppClock.swift */,
 				C00000000000000000000020 /* InkText.swift */,
 				C00000000000000000000021 /* NotebookRules.swift */,
+                F97000000000000000000002,
 				C00000000000000000000010 /* ErrorBanner.swift */,
 			);
 			path = Views;
@@ -324,6 +330,7 @@
 			files = (
 				D00000000000000000000017 /* PatrickHand-Regular.ttf in Resources */,
 				D00000000000000000000019 /* Xiaolai-Regular.ttf in Resources */,
+                F97000000000000000000003,
                 F92000000000000000000006,
                 E12000000000000000000001 /* Interface.xcstrings in Resources */,
 				A1B2C3D4E5F6000000000013 /* Assets.xcassets in Resources */,
@@ -364,6 +371,7 @@
 				D00000000000000000000018 /* AppClock.swift in Sources */,
 				D00000000000000000000020 /* InkText.swift in Sources */,
 				D00000000000000000000021 /* NotebookRules.swift in Sources */,
+                F97000000000000000000001,
 				D00000000000000000000010 /* ErrorBanner.swift in Sources */,
 				D00000000000000000000011 /* DictationService.swift in Sources */,
 				D00000000000000000000012 /* SystemDictationService.swift in Sources */,

@@ -32,6 +32,7 @@ final class MessageStore {
     private var sessionsByModeID: [String: MessageSession] = [:]
     private var preparedNextRandomMessage: LearningMessage?
     private var preparedNextRandomSourceID: UUID?
+    private var isAutomaticSpeechEnabled = false
     private var autoSpeechTask: Task<Void, Never>?
     private var lastAutoSpokenMessageID: UUID?
     private var speechRequestID = UUID()
@@ -225,6 +226,13 @@ final class MessageStore {
         self.messages = [MockMessageService.openingMessage(for: initialLanguageMode)]
         self.currentIndex = 0
         bindDictationUpdates()
+    }
+
+    /// The opening title and language setup must finish before the first card speaks.
+    func enableAutomaticSpeech() {
+        guard !isAutomaticSpeechEnabled else { return }
+        isAutomaticSpeechEnabled = true
+        if hasLoadedPersistedSession { scheduleAutoSpeakCurrentMessage() }
     }
 
     func attachPersistence(_ modelContext: ModelContext) {
@@ -596,7 +604,7 @@ final class MessageStore {
 
     private func scheduleAutoSpeakCurrentMessage() {
         prepareAnnotations(for: currentMessage.id)
-        guard !usesLocalMessages, !isShowingBlankCard else { return }
+        guard isAutomaticSpeechEnabled, !usesLocalMessages, !isShowingBlankCard else { return }
         let messageID = currentMessage.id
         guard lastAutoSpokenMessageID != messageID else { return }
 

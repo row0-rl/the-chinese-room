@@ -5,6 +5,10 @@ import Translation
 struct AppView: View {
     @Environment(\.modelContext) private var modelContext
     @State private var store: MessageStore
+    @State private var showsLaunchTitle = true
+    @State private var hasFinishedLaunch = false
+    @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var needsLanguageSetup: Bool
     private var appLocale: AppLocale { AppLocale.forLanguage(store.currentLanguageMode.source) }
 
@@ -39,6 +43,23 @@ struct AppView: View {
             store.attachPersistence(modelContext)
         }
         .appClock()
+        .allowsHitTesting(!showsLaunchTitle)
+        .accessibilityHidden(showsLaunchTitle)
+        .overlay {
+            if showsLaunchTitle {
+                LaunchTitleView {
+                    withAnimation(reduceMotion ? nil : .easeOut(duration: 0.25), completionCriteria: .removed) {
+                        showsLaunchTitle = false
+                    } completion: {
+                        hasFinishedLaunch = true
+                    }
+                }
+                .transition(.opacity)
+            }
+        }
+        .onChange(of: hasFinishedLaunch && !needsLanguageSetup && scenePhase == .active) { _, ready in
+            if ready { store.enableAutomaticSpeech() }
+        }
     }
 }
 

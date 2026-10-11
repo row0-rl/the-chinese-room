@@ -56,6 +56,14 @@ struct PencilRectangle: View {
         .accessibilityHidden(true)
     }
 
+    /// Shared card geometry, rendered directly at the size of compact controls.
+    nonisolated static func outlinePath(seed: UUID, size: CGSize, cornerRadius: CGFloat,
+                            cornerJitter: CGFloat, lineWidth: CGFloat, wobble: CGFloat) -> Path {
+        let request = PencilBorderRequest(seed: seed, size: size, scale: 1,
+            cornerRadius: cornerRadius, cornerJitter: cornerJitter, lineWidth: lineWidth, wobble: wobble)
+        return PencilBorderDrawing.outlinePath(for: request)
+    }
+
     private struct RenderedBorder {
         let seed: UUID
         let image: UIImage
@@ -161,12 +169,13 @@ private enum PencilBorderDrawing {
                        wobble: min(request.wobble, min(rect.width, rect.height) * 0.08), random: &random)
     }
 
-    static func outlinePath(for request: PencilBorderRequest, height: CGFloat) -> Path {
+    static func outlinePath(for request: PencilBorderRequest, height: CGFloat? = nil) -> Path {
         var random = generator(seed: request.seed)
         let samples = samples(for: request, random: &random)
         let cap = PencilRectangle.capHeight
-        let targetCap = min(cap, height / 2)
         func resized(_ point: CGPoint) -> CGPoint {
+            guard let height else { return point }
+            let targetCap = min(cap, height / 2)
             let y: CGFloat
             if point.y <= cap {
                 y = point.y * targetCap / cap

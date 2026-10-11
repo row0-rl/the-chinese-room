@@ -80,6 +80,16 @@ actor ControlledMessages: MessageService {
     func ready() { starts.removeFirst().resume() }
 }
 
+@MainActor final class RecordingSpeech: SpeechService {
+    var isSpeechAudioEnabled: Bool { true }
+    var spoken: [String] = []
+    func availableVoices(localeIdentifier: String) -> [SpeechVoice] { [] }
+    func prepareSpeechAudio(_ text: String, localeIdentifier: String) async throws {}
+    func speak(_ text: String, localeIdentifier: String, voiceIdentifier: String?) async throws {
+        spoken.append(text)
+    }
+}
+
 @main struct MessageLifecycleRegression {
     @MainActor static func waitUntil(file: StaticString = #filePath, line: UInt = #line, _ predicate: () async -> Bool) async {
         for _ in 0..<10000 {
@@ -239,6 +249,32 @@ actor ControlledMessages: MessageService {
         let background = ControlledMessages()
         let fresh = MessageStore(service: background)
         let container = try ModelContainer(for: MessageSessionRecord.self, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
+        // History and prefetch may load behind the title, but audio waits for the visible main screen.
+        let speech = RecordingSpeech()
+        let startup = MessageStore(service: MockMessageService(), speechService: speech, usesLocalMessages: false)
+        startup.attachPersistence(container.mainContext)
+        for _ in 0..<100 { await Task.yield() }
+        precondition(speech.spoken.isEmpty, "The opening card must stay silent behind the launch title/setup")
+        startup.enableAutomaticSpeech()
+        await waitUntil { speech.spoken.count == 1 }
+        precondition(speech.spoken == [startup.currentMessage.targetText])
+        startup.enableAutomaticSpeech()
+        for _ in 0..<100 { await Task.yield() }
+        precondition(speech.spoken.count == 1, "Repeated readiness must not replay the first card")
+        await startup.submit("hello")
+        await waitUntil { speech.spoken.count == 2 }
+        precondition(speech.spoken.last == startup.currentMessage.targetText, "Later cards still autoplay")
+
+        let earlySpeech = RecordingSpeech()
+        let earlyStartup = MessageStore(service: MockMessageService(), speechService: earlySpeech, usesLocalMessages: false)
+        earlyStartup.enableAutomaticSpeech()
+        for _ in 0..<100 { await Task.yield() }
+        precondition(earlySpeech.spoken.isEmpty, "Readiness before history is loaded must not speak a stale starter")
+        earlyStartup.attachPersistence(container.mainContext)
+        await waitUntil { earlySpeech.spoken.count == 1 }
+        precondition(earlySpeech.spoken == [earlyStartup.currentMessage.targetText])
+        print("PASS: first-card audio waits for main-screen readiness, starts once, and later cards still autoplay")
+
         fresh.attachPersistence(container.mainContext)
         await waitUntil { await background.count == 1 }
         await background.complete(1, failing: true)
