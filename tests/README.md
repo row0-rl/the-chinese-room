@@ -1,5 +1,22 @@
 # Generated-language regression checks
 
+## Rooms
+
+Run `bash scripts/test-rooms.sh` to exercise the production RoomStore,
+MessageStore, and SwiftData models. It upgrades a real temporary store created
+with the previous single-entity schema, then verifies duplicate-pair prevention,
+directional histories, stable tabs, pin ordering, rename persistence, selection,
+per-room card positions, archive-all, and restoration without deleting messages.
+It also checks first-room setup and same-language rejection.
+
+For layout inspection without device-only Translation and speech, launch a Debug
+build with `--rooms-preview`. This uses local starter cards, disables generation
+and audio, and shows the Local indicator. It still exercises real Room persistence.
+Normal launches continue to use the on-device services. Translation, dictation,
+and speech integration should be checked on the target iPhone.
+
+## Generated-language checks
+
 Run `bash scripts/test-generated-language.sh` on macOS 26+ with Xcode 26+.
 
 The script compiles the production prompts, generated response types, validators,

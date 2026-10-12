@@ -6,10 +6,10 @@ struct MessageHomeView: View {
     @Environment(\.scenePhase) private var scenePhase
     @State private var dictationStartTask: Task<Void, Never>?
     let store: MessageStore
+    let rooms: RoomStore
     let appStrings: AppStrings
     @State private var inputText = ""
     @State private var showsKeyboardInput = false
-    @State private var showsLanguageSelector = false
     @State private var showsSettings = false
     @State private var cardDragOffset: CGFloat = 0
     @State private var isPaging = false
@@ -29,18 +29,18 @@ struct MessageHomeView: View {
 
                 VStack(spacing: 0) {
                     cardStack(height: cardViewportHeight)
-                    .padding(.horizontal, 20)
+                        .padding(.horizontal, 20)
 
                     Spacer(minLength: 8)
+                    if store.usesLocalMessages {
+                        Text(appStrings.localTitle).appFont(.caption)
+                            .accessibilityLabel(appStrings.localLabel)
+                    }
                     inputArea
                 }
             }
 
-            if showsKeyboardInput {
-                keyboardDismissLayer
-            }
-
-            floatingLocalIndicator
+            if showsKeyboardInput { keyboardDismissLayer }
             settingsButton
         }
         .foregroundStyle(Color.chineseRoomInk)
@@ -56,7 +56,7 @@ struct MessageHomeView: View {
         .onChange(of: isDraggingCard) { _, dragging in
             if !dragging && !isPaging { cardDragHaptics.stopRumble() }
         }
-        .onChange(of: showsKeyboardInput || showsLanguageSelector || showsSettings) { _, presented in
+        .onChange(of: showsKeyboardInput || showsSettings) { _, presented in
             if presented { cardDragHaptics.stopRumble() }
         }
         .onChange(of: store.generationError) { _, error in
@@ -72,41 +72,24 @@ struct MessageHomeView: View {
             guard isShowingBlankCard else { return }
             recenterCardPager()
         }
-        .sheet(isPresented: $showsLanguageSelector) {
-            LanguageSelectionView(
-                languageMode: store.currentLanguageMode
-            ) { languageMode in
-                store.updateLanguageMode(languageMode)
-            }
+        .onChange(of: rooms.currentRoomID) { _, _ in
+            inputText = ""
+            showsKeyboardInput = false
+            isInputFocused = false
+            cancelHeldDictation()
+            recenterCardPager()
         }
         .sheet(isPresented: $showsSettings) {
-            SettingsView(store: store)
+            SettingsView(store: store, rooms: rooms)
         }
-    }
-
-    private var floatingLocalIndicator: some View {
-        HStack {
-            if store.usesLocalMessages {
-                Text(appStrings.localTitle)
-                    .appFont(.caption)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(Color.chineseRoomInk.opacity(0.08))
-                    .clipShape(Capsule())
-                    .accessibilityLabel(appStrings.localLabel)
-            }
-            Spacer()
-        }
-        .padding(.horizontal, 20)
-        .safeAreaPadding(.top, 8)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .allowsHitTesting(true)
     }
 
     private var settingsButton: some View {
         HStack {
             Spacer()
             Button {
+                cancelHeldDictation()
+                dismissKeyboardMode()
                 showsSettings = true
             } label: {
                 Image(systemName: "gearshape.fill")
@@ -118,6 +101,7 @@ struct MessageHomeView: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel(appStrings.settingsTitle)
+            .accessibilityIdentifier("settings")
         }
         .padding(.horizontal, 20)
         .safeAreaPadding(.top, 8)
@@ -379,21 +363,6 @@ struct MessageHomeView: View {
         }
     }
 
-    private var languageSelectorButton: some View {
-        Button {
-            showsLanguageSelector = true
-        } label: {
-            Image(systemName: "translate")
-                .font(.title3.weight(.semibold))
-                .frame(width: 44, height: 44)
-            .background(Color.chineseRoomControl(0.42))
-                .foregroundStyle(Color.chineseRoomInk)
-                .clipShape(Circle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("\(appStrings.languageSelectorTitle): \(appStrings.languageName(store.currentLanguageMode.source)) → \(appStrings.languageName(store.currentLanguageMode.target))")
-    }
-
     private var inputArea: some View {
         VStack(spacing: 12) {
             if let error = store.generationError {
@@ -425,7 +394,6 @@ struct MessageHomeView: View {
                 .frame(height: 84)
                 .allowsHitTesting(false)
         }
-        .ignoresSafeArea(edges: .top)
     }
 
     private var typedInputBar: some View {
@@ -456,8 +424,6 @@ struct MessageHomeView: View {
     private var inputBar: some View {
         HStack(spacing: 12) {
             Spacer(minLength: 0)
-
-            languageSelectorButton
 
             DictationPressButton(
                 label: appStrings.holdToSpeakLabel,
@@ -669,53 +635,49 @@ private struct WritingWaveRandom {
 
 private struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
-    @State private var source: LanguageProfile
-    @State private var target: LanguageProfile
     @State private var voicePreviewError: String?
     @State private var voicePreviewTask: Task<Void, Never>?
     @State private var isPreparingVoicePreview = false
     @State private var selectedVoiceIdentifier: String?
     @AppStorage(AppAppearance.storageKey) private var appearance = AppAppearance.system
     let store: MessageStore
+    let rooms: RoomStore
+    private var source: LanguageProfile { store.currentLanguageMode.source }
+    private var target: LanguageProfile { store.currentLanguageMode.target }
     private var appStrings: AppStrings { AppLocale.forLanguage(source).strings }
 
-    init(store: MessageStore) {
+    init(store: MessageStore, rooms: RoomStore) {
         self.store = store
-        _source = State(initialValue: store.currentLanguageMode.source)
-        _target = State(initialValue: store.currentLanguageMode.target)
+        self.rooms = rooms
         _selectedVoiceIdentifier = State(
             initialValue: store.availableVoices(for: store.currentLanguageMode)
                 .first { $0.id == store.selectedVoiceIdentifier(for: store.currentLanguageMode) }?.id
         )
     }
 
-    private var editedMode: LanguageMode {
+    private var roomMode: LanguageMode {
         LanguageMode(source: source, target: target)
     }
 
     private var voices: [SpeechVoice] {
-        store.availableVoices(for: editedMode)
+        store.availableVoices(for: roomMode)
     }
 
     var body: some View {
         NavigationStack {
             Form {
                 Section {
-                    Picker(appStrings.originalLanguageTitle, selection: $source) {
-                        ForEach(LanguageCatalog.supportedLanguages) { language in
-                            Text(appStrings.languageName(language)).appFont(.body).tag(language)
-                        }
+                    NavigationLink {
+                        RoomsManagementView(rooms: rooms, store: store)
+                    } label: {
+                        Label(appStrings.roomsTitle, systemImage: "rectangle.stack")
+                            .appFont(.body)
                     }
-                    .appFont(.body)
-
-                    Picker(appStrings.targetLanguageTitle, selection: $target) {
-                        ForEach(LanguageCatalog.supportedLanguages) { language in
-                            Text(appStrings.languageName(language)).appFont(.body).tag(language)
-                        }
+                    if let room = rooms.currentRoom {
+                        RoomLabel(room: room, strings: appStrings)
                     }
-                    .appFont(.body)
                 } header: {
-                    Text(appStrings.learningModeTitle).appFont(.footnote)
+                    Text(appStrings.currentRoomTitle).appFont(.footnote)
                 }
 
                 Section {
@@ -739,7 +701,10 @@ private struct SettingsView: View {
                         Text(appStrings.speechUnavailableTitle)
                             .appFont(.body)
                     } else {
-                        Picker(appStrings.voiceTitle, selection: $selectedVoiceIdentifier) {
+                        Picker(appStrings.voiceTitle, selection: Binding(
+                            get: { selectedVoiceIdentifier },
+                            set: { selectVoice($0) }
+                        )) {
                             Text(appStrings.systemDefaultTitle).appFont(.body).tag(String?.none)
                             ForEach(voices) { voice in
                                 Text("\(voice.name) · \(voice.qualityDescription)")
@@ -776,31 +741,11 @@ private struct SettingsView: View {
             .navigationTitle(appStrings.settingsTitle)
             .navigationBarTitleDisplayMode(.inline)
             .environment(\.locale, Locale(identifier: appStrings.localeIdentifier))
-            .onChange(of: source) { oldValue, _ in
-                guard oldValue != source else { return }
-                loadVoiceForEditedMode()
-            }
-            .onChange(of: target) { oldValue, _ in
-                guard oldValue != target else { return }
-                loadVoiceForEditedMode()
-            }
-            .onChange(of: selectedVoiceIdentifier) { oldValue, newValue in
-                guard oldValue != newValue else { return }
+            .onChange(of: store.currentLanguageMode) { _, _ in
                 voicePreviewTask?.cancel()
                 voicePreviewError = nil
-                isPreparingVoicePreview = true
-                let mode = editedMode
-                voicePreviewTask = Task {
-                    defer { if !Task.isCancelled { isPreparingVoicePreview = false } }
-                    do {
-                        try await store.previewVoice(newValue, for: mode)
-                    } catch is CancellationError {
-                        return
-                    } catch {
-                        guard !Task.isCancelled else { return }
-                        voicePreviewError = error.localizedDescription
-                    }
-                }
+                isPreparingVoicePreview = false
+                loadVoiceForRoom()
             }
             .onDisappear {
                 voicePreviewTask?.cancel()
@@ -816,83 +761,35 @@ private struct SettingsView: View {
 
                 ToolbarItem(placement: .confirmationAction) {
                     Button(appStrings.doneButtonTitle) {
-                        store.updateVoiceIdentifier(selectedVoiceIdentifier, for: editedMode)
-                        store.updateLanguageMode(editedMode)
+                        store.updateVoiceIdentifier(selectedVoiceIdentifier, for: roomMode)
                         dismiss()
                     }
-                    .disabled(source == target)
                     .appFont(.body)
                 }
             }
         }
     }
 
-    private func loadVoiceForEditedMode() {
-        selectedVoiceIdentifier = voices.first { $0.id == store.selectedVoiceIdentifier(for: editedMode) }?.id
-    }
-}
-
-private struct LanguageSelectionView: View {
-    @Environment(\.dismiss) private var dismiss
-    @State private var source: LanguageProfile
-    @State private var target: LanguageProfile
-    private var appStrings: AppStrings { AppLocale.forLanguage(source).strings }
-    let onSave: (LanguageMode) -> Void
-
-    init(languageMode: LanguageMode, onSave: @escaping (LanguageMode) -> Void) {
-        _source = State(initialValue: languageMode.source)
-        _target = State(initialValue: languageMode.target)
-        self.onSave = onSave
+    private func loadVoiceForRoom() {
+        selectedVoiceIdentifier = voices.first { $0.id == store.selectedVoiceIdentifier(for: roomMode) }?.id
     }
 
-    var body: some View {
-        NavigationStack {
-            Form {
-                Section {
-                    Picker(appStrings.originalLanguageTitle, selection: $source) {
-                        ForEach(LanguageCatalog.supportedLanguages) { language in
-                            Text(appStrings.languageName(language))
-                                .appFont(.body)
-                                .tag(language)
-                        }
-                    }
-                    .appFont(.body)
-                } header: {
-                    Text(appStrings.originalLanguageTitle).appFont(.footnote)
-                }
-
-                Section {
-                    Picker(appStrings.targetLanguageTitle, selection: $target) {
-                        ForEach(LanguageCatalog.supportedLanguages) { language in
-                            Text(appStrings.languageName(language))
-                                .appFont(.body)
-                                .tag(language)
-                        }
-                    }
-                    .appFont(.body)
-                } header: {
-                    Text(appStrings.targetLanguageTitle).appFont(.footnote)
-                }
-            }
-            .navigationTitle(appStrings.languageSelectorTitle)
-            .navigationBarTitleDisplayMode(.inline)
-            .environment(\.locale, Locale(identifier: appStrings.localeIdentifier))
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button(appStrings.cancelButtonTitle) {
-                        dismiss()
-                    }
-                    .appFont(.body)
-                }
-
-                ToolbarItem(placement: .confirmationAction) {
-                    Button(appStrings.doneButtonTitle) {
-                        onSave(LanguageMode(source: source, target: target))
-                        dismiss()
-                    }
-                    .disabled(source == target)
-                    .appFont(.body)
-                }
+    private func selectVoice(_ identifier: String?) {
+        guard identifier != selectedVoiceIdentifier else { return }
+        selectedVoiceIdentifier = identifier
+        voicePreviewTask?.cancel()
+        voicePreviewError = nil
+        isPreparingVoicePreview = true
+        let mode = roomMode
+        voicePreviewTask = Task {
+            defer { if !Task.isCancelled { isPreparingVoicePreview = false } }
+            do {
+                try await store.previewVoice(identifier, for: mode)
+            } catch is CancellationError {
+                return
+            } catch {
+                guard !Task.isCancelled else { return }
+                voicePreviewError = error.localizedDescription
             }
         }
     }

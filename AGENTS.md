@@ -25,6 +25,23 @@ A message contains:
 
 Messages use four sequential stages: Apple Foundation Models generates or normalizes the original expression, Apple Translation translates it, Apple Foundation Models segments the target expression using delimiter-based text output in permissive transformation mode, and one Apple Foundation Models request glosses the validated fixed chunks. Segmentation has one correction attempt; gloss repair requests only missing or invalid chunk IDs while retaining valid glosses. Optional usage examples are currently omitted.
 
+### Rooms
+
+Users create saved Rooms, each representing one directional language pair.
+Room selection and management live exclusively in Settings › Rooms. Selecting a
+Room restores its message history and last viewed card. Add a room creates a
+Room; adding an existing pair opens that Room, including archived Rooms.
+The two language pickers exclude the opposite selection; matching language IDs
+are rejected when creating, switching, or restoring a Room.
+Long-press a Room to pin, rename, or archive it. Archived Rooms can be restored
+from the same settings screen. The main screen has only the Settings gear.
+Pinned Rooms come first; other Rooms use a snapshot of recent use at launch and
+stay in place during a session. Custom names always retain the language-pair label.
+Room metadata and per-pair message sessions are stored separately in SwiftData.
+Existing saved sessions and the previously selected pair become Rooms on upgrade.
+Archiving hides a Room without deleting its messages. Archiving every Room returns
+to a create-or-restore screen. Cross-launch message history is enabled.
+
 ### Random Messages
 
 On opening the app, the page shows a random message. User can swipe down to generate a next random message, and swipe up to go back to the previous message.

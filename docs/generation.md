@@ -27,7 +27,8 @@ The runtime serializes requests, propagates cancellation, and creates a fresh
 session for each request. Breakdown failure leaves the completed source and
 translation available, with no fabricated glosses. Cancellation still propagates.
 Guided generation and validation do not establish linguistic correctness or ideal
-chunk granularity. Optional usage examples and cross-launch history remain disabled.
+chunk granularity. Optional usage examples remain disabled. Message history and the last viewed card
+are persisted separately for each saved Room (directional language pair).
 
 Source generation and glossing use SystemLanguageModel.default with native guided
 generation and default guardrails. Segmentation alone uses permissive text

@@ -277,7 +277,8 @@ enum LanguageCatalog {
         let parts = id.components(separatedBy: "__to__")
         guard parts.count == 2,
               let source = language(id: parts[0]),
-              let target = language(id: parts[1])
+              let target = language(id: parts[1]),
+              source.id != target.id
         else {
             return nil
         }
@@ -386,6 +387,27 @@ struct AppStrings: Equatable {
     var generationLanguageFailure: String { text("generationLanguageFailure") }
     var examplesTitle: String { text("examplesTitle") }
     var languageSelectorTitle: String { text("languageSelectorTitle") }
+    var roomsTitle: String { text("roomsTitle") }
+    var currentRoomTitle: String { text("currentRoomTitle") }
+    var addRoomTitle: String { text("addRoomTitle") }
+    var chooseRoomTitle: String { text("chooseRoomTitle") }
+    var firstRoomTitle: String { text("firstRoomTitle") }
+    var roomCreationSubtitle: String { text("roomCreationSubtitle") }
+    var roomTargetTitle: String { text("roomTargetTitle") }
+    var roomSourceTitle: String { text("roomSourceTitle") }
+    var roomDifferentLanguages: String { text("roomDifferentLanguages") }
+    var roomAlreadyExists: String { text("roomAlreadyExists") }
+    var createRoomTitle: String { text("createRoomTitle") }
+    var openRoomTitle: String { text("openRoomTitle") }
+    var pinRoomTitle: String { text("pinRoomTitle") }
+    var unpinRoomTitle: String { text("unpinRoomTitle") }
+    var renameRoomTitle: String { text("renameRoomTitle") }
+    var archiveRoomTitle: String { text("archiveRoomTitle") }
+    var archivedRoomsTitle: String { text("archivedRoomsTitle") }
+    var archivedRoomsFooter: String { text("archivedRoomsFooter") }
+    var roomsOrderingFooter: String { text("roomsOrderingFooter") }
+    var roomNameTitle: String { text("roomNameTitle") }
+    var roomNameFooter: String { text("roomNameFooter") }
     var originalLanguageTitle: String { text("originalLanguageTitle") }
     var targetLanguageTitle: String { text("targetLanguageTitle") }
     var doneButtonTitle: String { text("doneButtonTitle") }
@@ -445,6 +467,11 @@ struct AppStrings: Equatable {
     func languageName(_ language: LanguageProfile) -> String {
         Locale(identifier: localeIdentifier).localizedString(forIdentifier: language.localeIdentifier)
             ?? language.nativeName
+    }
+
+    func roomLanguageName(_ language: LanguageProfile) -> String {
+        let code = Locale.Language(identifier: language.localeIdentifier).languageCode?.identifier ?? language.id
+        return Locale(identifier: localeIdentifier).localizedString(forLanguageCode: code) ?? language.displayName
     }
 }
 

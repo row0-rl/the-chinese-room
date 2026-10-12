@@ -27,6 +27,6 @@ struct TheChineseRoomApp: App {
                 .preferredColorScheme(appearance.colorScheme)
             #endif
         }
-        .modelContainer(for: MessageSessionRecord.self)
+        .modelContainer(for: [MessageSessionRecord.self, RoomRecord.self])
     }
 }

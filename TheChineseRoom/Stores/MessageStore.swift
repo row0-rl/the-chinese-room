@@ -33,6 +33,7 @@ final class MessageStore {
     private var preparedNextRandomMessage: LearningMessage?
     private var preparedNextRandomSourceID: UUID?
     private var isAutomaticSpeechEnabled = false
+    private var isRoomActive = true
     private var autoSpeechTask: Task<Void, Never>?
     private var lastAutoSpokenMessageID: UUID?
     private var speechRequestID = UUID()
@@ -213,6 +214,7 @@ final class MessageStore {
         speechService: SpeechService? = nil,
         dictationService: DictationService? = nil,
         usesLocalMessages: Bool = true,
+        persistsMessageHistory: Bool = false,
         initialLanguageMode: LanguageMode = LanguageMode.defaultMode
     ) {
         self.appleTranslation = nil
@@ -220,7 +222,7 @@ final class MessageStore {
         self.messageQueue = MessageQueueActor(service: service)
         self.speechService = speechService ?? SilentSpeechService()
         self.dictationService = dictationService ?? UnavailableDictationService()
-        self.persistsMessageHistory = false
+        self.persistsMessageHistory = persistsMessageHistory
         self.usesLocalMessages = usesLocalMessages
         self.currentLanguageMode = initialLanguageMode
         self.messages = [MockMessageService.openingMessage(for: initialLanguageMode)]
@@ -233,6 +235,22 @@ final class MessageStore {
         guard !isAutomaticSpeechEnabled else { return }
         isAutomaticSpeechEnabled = true
         if hasLoadedPersistedSession { scheduleAutoSpeakCurrentMessage() }
+    }
+
+    func deactivateCurrentRoom() {
+        isRoomActive = false
+        isAutomaticSpeechEnabled = false
+        autoSpeechTask?.cancel()
+        speechRequestID = UUID()
+        isSpeaking = false
+        lastAutoSpokenMessageID = nil
+        speechService.stop()
+        cancelDictation()
+        clearPreparedNextRandomMessage()
+        Task {
+            guard !isRoomActive else { return }
+            await messageQueue.reset()
+        }
     }
 
     func attachPersistence(_ modelContext: ModelContext) {
@@ -308,9 +326,13 @@ final class MessageStore {
     }
 
     func updateLanguageMode(_ newLanguageMode: LanguageMode) {
+        guard newLanguageMode.source.id != newLanguageMode.target.id else { return }
         generationError = nil
+        let wasInactive = !isRoomActive
+        isRoomActive = true
         guard currentLanguageMode != newLanguageMode else {
             LanguageModeStorage.save(newLanguageMode)
+            if wasInactive { Task { await prepareNextRandomMessage() } }
             return
         }
 
@@ -545,7 +567,7 @@ final class MessageStore {
     }
 
     private func prepareNextRandomMessage() async {
-        guard currentIndex == messages.count - 1, !isGenerating, pendingDictationText == nil else { return }
+        guard isRoomActive, currentIndex == messages.count - 1, !isGenerating, pendingDictationText == nil else { return }
 
         let sourceMessage = currentMessage
         guard preparedNextRandomSourceID != sourceMessage.id, !isPreparingNextRandom else { return }
@@ -568,7 +590,7 @@ final class MessageStore {
                 Task { await prepareNextRandomMessage() }
                 return
             }
-            guard !isGenerating, !isShowingBlankCard, pendingDictationText == nil else { return }
+            guard isRoomActive, !isGenerating, !isShowingBlankCard, pendingDictationText == nil else { return }
             preparedNextRandomMessage = assignCardID(to: nextMessage, id: nextRandomCardID)
             preparedNextRandomSourceID = sourceMessage.id
             prepareAnnotations(for: nextRandomCardID)
@@ -604,7 +626,7 @@ final class MessageStore {
 
     private func scheduleAutoSpeakCurrentMessage() {
         prepareAnnotations(for: currentMessage.id)
-        guard isAutomaticSpeechEnabled, !usesLocalMessages, !isShowingBlankCard else { return }
+        guard isRoomActive, isAutomaticSpeechEnabled, !usesLocalMessages, !isShowingBlankCard else { return }
         let messageID = currentMessage.id
         guard lastAutoSpokenMessageID != messageID else { return }
 

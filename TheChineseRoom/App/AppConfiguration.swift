@@ -1,5 +1,5 @@
 struct AppConfiguration {
-    var persistsMessageHistory = false
+    var persistsMessageHistory = true
 
     static let current = AppConfiguration()
 }

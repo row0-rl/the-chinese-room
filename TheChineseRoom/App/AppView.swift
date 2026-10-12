@@ -5,31 +5,34 @@ import Translation
 struct AppView: View {
     @Environment(\.modelContext) private var modelContext
     @State private var store: MessageStore
+    @State private var rooms = RoomStore()
     @State private var showsLaunchTitle = true
     @State private var hasFinishedLaunch = false
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var needsLanguageSetup: Bool
     private var appLocale: AppLocale { AppLocale.forLanguage(store.currentLanguageMode.source) }
 
     init() {
         let savedMode = LanguageModeStorage.currentMode
         let initialMode = savedMode ?? .defaultMode
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("--rooms-preview") {
+            _store = State(initialValue: MessageStore(service: RoomPreviewMessageService(),
+                persistsMessageHistory: true, initialLanguageMode: initialMode))
+            return
+        }
+        #endif
         _store = State(initialValue: MessageStore(configuration: .current, initialLanguageMode: initialMode))
-        _needsLanguageSetup = State(initialValue: savedMode == nil)
     }
 
     var body: some View {
         Group {
-            if needsLanguageSetup {
-                FirstLaunchLanguageModeView(
-                    initialMode: store.currentLanguageMode
-                ) { selectedMode in
-                    store.updateLanguageMode(selectedMode)
-                    needsLanguageSetup = false
-                }
+            if !rooms.isLoaded {
+                Color.chineseRoomBackground.ignoresSafeArea()
+            } else if rooms.currentRoom == nil {
+                RoomCreationView(rooms: rooms, initialMode: store.currentLanguageMode, isFirstRoom: true)
             } else {
-                MessageHomeView(store: store, appStrings: appLocale.strings)
+                MessageHomeView(store: store, rooms: rooms, appStrings: appLocale.strings)
             }
         }
         .appFont(.body)
@@ -40,8 +43,10 @@ struct AppView: View {
         }
         .environment(\.locale, Locale(identifier: appLocale.id))
         .onAppear {
-            store.attachPersistence(modelContext)
+            rooms.attachPersistence(modelContext, selectedMode: LanguageModeStorage.currentMode)
+            activateCurrentRoom()
         }
+        .onChange(of: rooms.currentRoomID) { _, _ in activateCurrentRoom() }
         .appClock()
         .allowsHitTesting(!showsLaunchTitle)
         .accessibilityHidden(showsLaunchTitle)
@@ -57,9 +62,18 @@ struct AppView: View {
                 .transition(.opacity)
             }
         }
-        .onChange(of: hasFinishedLaunch && !needsLanguageSetup && scenePhase == .active) { _, ready in
+        .onChange(of: hasFinishedLaunch && rooms.currentRoom != nil && scenePhase == .active) { _, ready in
             if ready { store.enableAutomaticSpeech() }
         }
+    }
+
+    private func activateCurrentRoom() {
+        guard let mode = rooms.currentRoom?.languageMode else {
+            store.deactivateCurrentRoom()
+            return
+        }
+        store.updateLanguageMode(mode)
+        store.attachPersistence(modelContext)
     }
 }
 
@@ -67,83 +81,18 @@ struct AppView: View {
     AppView()
 }
 
-private struct FirstLaunchLanguageModeView: View {
-    @State private var source: LanguageProfile
-    @State private var target: LanguageProfile
-    private var appStrings: AppStrings { AppLocale.forLanguage(source).strings }
-    let onContinue: (LanguageMode) -> Void
-
-    init(initialMode: LanguageMode, onContinue: @escaping (LanguageMode) -> Void) {
-        _source = State(initialValue: initialMode.source)
-        _target = State(initialValue: initialMode.target)
-        self.onContinue = onContinue
+#if DEBUG
+/// Layout checks without launching Translation downloads or device-only speech.
+private struct RoomPreviewMessageService: MessageService {
+    func randomMessage(after: LearningMessage?, languageMode: LanguageMode, recentMessages: [LearningMessage]) async throws -> LearningMessage {
+        throw CancellationError()
     }
 
-    var body: some View {
-        ZStack {
-            Color.chineseRoomBackground
-                .ignoresSafeArea()
-
-            VStack(alignment: .leading, spacing: 24) {
-                Spacer()
-
-                VStack(alignment: .leading, spacing: 10) {
-                    Text(appStrings.firstLaunchTitle)
-                        .appFont(.largeTitle)
-                    Text(appStrings.firstLaunchSubtitle)
-                        .appFont(.body)
-                        .foregroundStyle(Color.chineseRoomInk.opacity(0.65))
-                }
-
-                VStack(spacing: 14) {
-                    languagePicker(title: appStrings.originalLanguageTitle, selection: $source)
-                    languagePicker(title: appStrings.targetLanguageTitle, selection: $target)
-                }
-
-                Button {
-                    onContinue(LanguageMode(source: source, target: target))
-                } label: {
-                    Text(appStrings.continueButtonTitle)
-                        .appFont(.headline)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(source == target ? Color.chineseRoomInk.opacity(0.25) : Color.chineseRoomInk)
-                        .foregroundStyle(Color.chineseRoomBackground)
-                        .clipShape(RoundedRectangle(cornerRadius: 8))
-                }
-                .disabled(source == target)
-
-                Spacer()
-            }
-            .padding(28)
-        }
-        .foregroundStyle(Color.chineseRoomInk)
-        .environment(\.locale, Locale(identifier: appStrings.localeIdentifier))
-    }
-
-    private func languagePicker(title: String, selection: Binding<LanguageProfile>) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title)
-                .appFont(.subheadline)
-                .foregroundStyle(Color.chineseRoomInk.opacity(0.7))
-
-            Picker(title, selection: selection) {
-                ForEach(LanguageCatalog.supportedLanguages) { language in
-                    Text("\(appStrings.languageName(language)) · \(language.nativeName)")
-                        .appFont(.body)
-                        .tag(language)
-                }
-            }
-            .pickerStyle(.menu)
-            .appFont(.body)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 12)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.chineseRoomControl(0.52))
-            .clipShape(RoundedRectangle(cornerRadius: 8))
-        }
+    func message(for input: String, languageMode: LanguageMode) async throws -> LearningMessage {
+        throw CancellationError()
     }
 }
+#endif
 
 private struct AppleTranslationHost: View {
     let translator: AppleTranslationService

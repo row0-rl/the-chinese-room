@@ -275,6 +275,23 @@ actor ControlledMessages: MessageService {
         precondition(earlySpeech.spoken == [earlyStartup.currentMessage.targetText])
         print("PASS: first-card audio waits for main-screen readiness, starts once, and later cards still autoplay")
 
+        let archivedBackground = ControlledMessages()
+        let archivedSpeech = RecordingSpeech()
+        let archivedStore = MessageStore(service: archivedBackground, speechService: archivedSpeech, usesLocalMessages: false)
+        archivedStore.attachPersistence(container.mainContext)
+        await waitUntil { await archivedBackground.count == 1 }
+        archivedStore.deactivateCurrentRoom()
+        await waitUntil { await archivedBackground.cancellations == 1 }
+        await waitUntil { !archivedStore.isPreparingNextRandom }
+        precondition(archivedSpeech.spoken.isEmpty && archivedStore.nextCardMessage == nil)
+        archivedStore.updateLanguageMode(archivedStore.currentLanguageMode)
+        await waitUntil { await archivedBackground.count == 2 }
+        archivedStore.enableAutomaticSpeech()
+        await waitUntil { archivedSpeech.spoken.count == 1 }
+        archivedStore.deactivateCurrentRoom()
+        await waitUntil { await archivedBackground.cancellations == 2 }
+        print("PASS: archiving the final room cancels prefetch and reopening the same pair resumes it")
+
         fresh.attachPersistence(container.mainContext)
         await waitUntil { await background.count == 1 }
         await background.complete(1, failing: true)
