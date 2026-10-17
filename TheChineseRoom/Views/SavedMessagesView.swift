@@ -7,10 +7,9 @@ struct SavedMessagesView: View {
     @State private var poppedID: String?
     @State private var poppedAnchorOffset: CGFloat?
     @State private var contentHeights: [String: CGFloat] = [:]
-    @State private var visibleCardEdges: [String: CGFloat] = [:]
-    @State private var stackWidth: CGFloat = 0
     @State private var visibleStackRect = CGRect.zero
-    @State private var lastPeekLocation: CGPoint?
+    @State private var lastPeekTranslation: CGFloat = 0
+    @State private var scrub = SavedMessageScrub()
     @State private var suppressTapUntil = Date.distantPast
     @State private var hapticTick = 0
 
@@ -88,11 +87,6 @@ struct SavedMessagesView: View {
                             .buttonStyle(.plain)
                             .frame(height: layout.advance(at: index), alignment: .top)
                             .contentShape(Rectangle())
-                            .onGeometryChange(for: CGFloat.self) {
-                                $0.frame(in: .named("saved-message-stack")).minY + SavedMessageStackLayout.topInset
-                            } action: { edge in
-                                if visibleCardEdges[item.id] != edge { visibleCardEdges[item.id] = edge }
-                            }
                             .highPriorityGesture(peekGesture(startingAt: item.id))
                             .accessibilityLabel(item.message.normalizedSourceText)
                             .accessibilityValue(item.message.targetText)
@@ -101,7 +95,6 @@ struct SavedMessagesView: View {
                         }
                     }
                     .fixedSize(horizontal: false, vertical: true)
-                    .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { stackWidth = $0 }
                     // Clip the overlapping sheets together, then draw the two
                     // side edges once. Individual card outlines would diverge
                     // at every join, even if they used the same pencil seed.
@@ -135,7 +128,6 @@ struct SavedMessagesView: View {
             if !active { endPeek() }
         }
         .onChange(of: items.map(\.id)) { _, ids in
-            visibleCardEdges = visibleCardEdges.filter { ids.contains($0.key) }
             if let poppedID, !ids.contains(poppedID) { endPeek() }
         }
         .onChange(of: store.currentLanguageMode.id) { _, _ in
@@ -177,18 +169,13 @@ struct SavedMessagesView: View {
                     popCard(initialID)
                     return
                 }
-                let location = drag.location
-                // Layout changes alone must not advance the selection. Any
-                // actual pointer movement can cross a visible card boundary.
-                if lastPeekLocation == location { return }
-                let verticalDelta = lastPeekLocation.map { location.y - $0.y } ?? drag.translation.height
-                lastPeekLocation = location
+                if poppedID == nil { popCard(initialID) }
+                let delta = drag.translation.height - lastPeekTranslation
+                lastPeekTranslation = drag.translation.height
                 let displayedItems = items
-                guard location.x >= 0, location.x <= stackWidth else { return }
-                let layout = stackLayout(for: displayedItems)
-                let measuredEdges = displayedItems.compactMap { visibleCardEdges[$0.id] }
-                guard let index = layout.index(at: location.y, visibleEdges: measuredEdges) else { return }
-                popCard(displayedItems[index].id, verticalDelta: verticalDelta, fingerY: location.y)
+                guard let index = displayedItems.firstIndex(where: { $0.id == poppedID }),
+                      let next = scrub.selection(after: delta, current: index, count: displayedItems.count) else { return }
+                popCard(displayedItems[next].id, verticalDelta: delta, fingerY: drag.location.y)
             }
             .onEnded { _ in endPeek() }
     }
@@ -210,7 +197,8 @@ struct SavedMessagesView: View {
     }
 
     private func endPeek() {
-        lastPeekLocation = nil
+        lastPeekTranslation = 0
+        scrub = SavedMessageScrub()
         guard poppedID != nil else { return }
         suppressTapUntil = Date().addingTimeInterval(0.35)
         let settle: Animation = reduceMotion ? .easeOut(duration: 0.12) : .spring(duration: 0.36, bounce: 0.22)

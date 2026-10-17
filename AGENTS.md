@@ -101,13 +101,14 @@ the selected sheet retains its size and text layout while neighboring sheets mov
 While holding, slide across the stack to uncover the card under the finger with
 selection haptics. During downward finger movement, the selected intact sheet's
 bottom edge sits 28 points below the finger in scroll-content coordinates when it
-becomes selected. It then stays at that position until another card pops; further
+becomes selected. Upward selection places its visible top edge 28 points above
+the finger. It then stays at that position until another card pops; further
 finger movement over the same selected card does not reposition it. Scrub activation
-uses measured card top-edge positions, including during repositioning animations, with no
-additional finger-travel threshold. An unchanged pointer does not trigger another
-selection merely because the stack moved.
-Upward movement and the initial hold reveal the selection in
-place. Direction uses the latest movement, so new upward selections stay in place. There is no viewport centering.
+uses 48 points of vertical finger travel to select the next or previous card,
+independent of the visible card bounds. Each selection resets the threshold;
+direction reversal starts a fresh threshold, and endpoints do not wrap.
+The initial hold reveals the selection in place. Direction uses the latest
+movement. There is no viewport centering.
 The earlier upward lift is removed. Only one card is
 uncovered; releasing or cancelling the gesture restores the compact overlap. Scrolling pauses only after the hold is recognized. Tapping still
 opens the full expression and an unsave action. The collection reads the current Room's live save flags; unsaving updates that

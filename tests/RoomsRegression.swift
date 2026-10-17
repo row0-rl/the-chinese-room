@@ -95,41 +95,37 @@ struct AppleMessageRuntime {
                 let aligned = SavedMessageStackLayout(count: 4, expandedIndex: index,
                     expandedHeight: fixedHeights[index], cardHeights: fixedHeights, anchorOffset: downAnchor)
                 precondition(abs(aligned.offset(at: index) + aligned.height(at: index)
-                    - fingerY - SavedMessageStackLayout.fingerBottomInset) < 0.001)
+                    - fingerY - SavedMessageStackLayout.fingerEdgeInset) < 0.001)
                 precondition(aligned.index(at: fingerY + 1) == index,
                     "Small continued downward movement must remain inside the popped sheet")
                 precondition(aligned.height(at: index) == intact.height(at: index))
-                precondition(intact.selectionAnchor(at: index, verticalDelta: -15, fingerY: fingerY) == intact.offset(at: index))
+                let upAnchor = intact.selectionAnchor(at: index, verticalDelta: -15, fingerY: fingerY)
+                let upAligned = SavedMessageStackLayout(count: 4, expandedIndex: index,
+                    expandedHeight: fixedHeights[index], cardHeights: fixedHeights, anchorOffset: upAnchor)
+                precondition(abs(upAligned.offset(at: index) + SavedMessageStackLayout.topInset
+                    + SavedMessageStackLayout.fingerEdgeInset - fingerY) < 0.001,
+                    "Upward selection must place the visible top edge 28 points above the finger")
+                precondition(upAligned.height(at: index) == intact.height(at: index))
                 precondition(intact.selectionAnchor(at: index, verticalDelta: 0, fingerY: fingerY) == intact.offset(at: index))
-                // After a downward selection, an upward reversal must preserve
-                // the next card's actual position instead of moving its bottom edge to the finger.
                 let next = min(3, index + 1)
-                precondition(aligned.selectionAnchor(at: next, verticalDelta: -2, fingerY: fingerY) == aligned.offset(at: next))
+                precondition(aligned.selectionAnchor(at: next, verticalDelta: -2, fingerY: fingerY)
+                    == fingerY - SavedMessageStackLayout.fingerEdgeInset - SavedMessageStackLayout.topInset)
             }
         }
-        // After positioning a revealed sheet against the finger, activation
-        // must follow the next sheet's visible top edge, not another 48 points
-        // of travel from the preceding activation.
-        let fingerAtPop: CGFloat = 400
-        let placed = SavedMessageStackLayout(count: 4, expandedIndex: 1, expandedHeight: 340,
-            cardHeights: fixedHeights,
-            anchorOffset: intact.selectionAnchor(at: 1, verticalDelta: 1, fingerY: fingerAtPop))
-        let nextVisibleEdge = placed.offset(at: 2) + SavedMessageStackLayout.topInset
-        precondition(nextVisibleEdge == fingerAtPop + SavedMessageStackLayout.fingerBottomInset)
-        precondition(placed.index(at: fingerAtPop + 1) == 1)
-        precondition(placed.index(at: nextVisibleEdge - 0.25) == 1)
-        precondition(placed.index(at: nextVisibleEdge + 0.25) == 2,
-            "Entering the next visible sheet must activate it immediately, even after subpoint travel")
-        let followingEdge = placed.offset(at: 3) + SavedMessageStackLayout.topInset
-        precondition(placed.index(at: followingEdge - 0.25) == 2)
-        precondition(placed.index(at: followingEdge + 0.25) == 3)
-        let animatingEdges: [CGFloat] = [26, 74, 415, 463]
-        precondition(placed.index(at: 410, visibleEdges: animatingEdges) == 1,
-            "A target layout boundary must not activate a sheet before its visible edge arrives")
-        precondition(placed.index(at: 415.25, visibleEdges: animatingEdges) == 2)
-        precondition(placed.index(at: 463.25, visibleEdges: animatingEdges) == 3)
-        print("PASS: visible card-boundary activation after repositioning, without a travel threshold")
-        print("PASS: inset finger alignment prevents cascading selection; upward reversal, fixed paper size, and scrolled coordinates")
+        var scrub = SavedMessageScrub()
+        precondition(scrub.selection(after: 47, current: 1, count: 4) == nil)
+        precondition(scrub.selection(after: 1, current: 1, count: 4) == 2)
+        precondition(scrub.selection(after: 0, current: 2, count: 4) == nil)
+        precondition(scrub.selection(after: -30, current: 2, count: 4) == nil)
+        precondition(scrub.selection(after: 30, current: 2, count: 4) == nil)
+        precondition(scrub.selection(after: -48, current: 2, count: 4) == 1)
+        precondition(scrub.selection(after: 500, current: 1, count: 4) == 2,
+            "One drag update must select only the adjacent card, without cascading")
+        precondition(scrub.selection(after: 48, current: 3, count: 4) == nil)
+        precondition(scrub.selection(after: -48, current: 3, count: 4) == 2)
+        precondition(scrub.selection(after: -48, current: 0, count: 4) == nil)
+        print("PASS: bidirectional scrub thresholds, direction reversal, endpoints, and adjacent-only selection")
+        print("PASS: symmetric finger-edge spacing, upward reversal, fixed paper size, and scrolled coordinates")
         print("PASS: immutable paper heights and anchored selection while neighboring sheets move")
         print("PASS: one-card expansion, lower-stack displacement, visible-card scrub targeting, and collapse geometry")
 

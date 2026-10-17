@@ -26,7 +26,7 @@ struct SavedMessageStackLayout {
     static let cardHeight: CGFloat = 176
     static let stride: CGFloat = 48
     static let topInset: CGFloat = 14
-    static let fingerBottomInset: CGFloat = 28
+    static let fingerEdgeInset: CGFloat = 28
     let count: Int
     let expandedIndex: Int?
     let expandedHeight: CGFloat
@@ -69,7 +69,10 @@ struct SavedMessageStackLayout {
 
     func selectionAnchor(at index: Int, verticalDelta: CGFloat, fingerY: CGFloat? = nil) -> CGFloat {
         if verticalDelta > 0, let fingerY {
-            return fingerY + Self.fingerBottomInset - height(at: index)
+            return fingerY + Self.fingerEdgeInset - height(at: index)
+        }
+        if verticalDelta < 0, let fingerY {
+            return fingerY - Self.fingerEdgeInset - Self.topInset
         }
         return offset(at: index)
     }
@@ -82,5 +85,24 @@ struct SavedMessageStackLayout {
         // Later sheets cover earlier ones. Use measured edges when supplied,
         // so a spring's intermediate positions agree with what is on screen.
         return edges.indices.last { edges[$0] <= y }
+    }
+}
+
+/// One deliberate movement selects one neighbor, regardless of paper geometry.
+struct SavedMessageScrub {
+    static let threshold: CGFloat = 48
+    private var travel: CGFloat = 0
+
+    mutating func selection(after delta: CGFloat, current: Int, count: Int) -> Int? {
+        guard delta != 0, count > 0 else { return nil }
+        // Reversing direction starts a fresh threshold immediately.
+        if travel * delta < 0 { travel = 0 }
+        travel += delta
+        guard abs(travel) >= Self.threshold else { return nil }
+        let direction = travel > 0 ? 1 : -1
+        travel = 0
+        let next = current + direction
+        guard (0..<count).contains(next) else { return nil }
+        return next
     }
 }
