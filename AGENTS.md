@@ -62,11 +62,12 @@ on release. A cylindrical surface model bends the corner without stretching
 its paper coordinates. The tip target follows diagonal progress and the finger's
 movement along the curl; changing that target rotates the curl axis, so both
 joins come from the same surface rather than independent edge offsets.
-The front, yellow backside, silhouette, pencil contours and shadow are projected
-from that surface. Unsaved sheets have a completely flat corner. Saving gives
+The front, yellow backside, silhouette and pencil contours are projected
+from that surface. The lifted corner has no cast shadow or surface-darkening gradient. Unsaved sheets have a completely flat corner. Saving gives
 a light haptic. This is a geometric page-curl approximation, not a material
-physics simulation; the curved patch does not currently warp message text or
-notebook rules.
+physics simulation. Message text and notebook rules stay visible through the
+front of the bend and are clipped at the projected silhouette, not the bend's
+starting axis; their positions are not yet warped across the curved surface.
 VoiceOver exposes a save/unsave action. The first-use hint disappears after saving. Reduce Motion uses a short
 transition. Save state is stored with the message in its Room history; legacy
 messages default to unsaved. Saved collections and feed resurfacing are not yet

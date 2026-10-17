@@ -369,10 +369,10 @@ struct MessagePaper<Content: View>: View {
     var body: some View {
         CappedCardScroll(maximumHeight: maximumHeight, resetScroll: resetScroll, content: content)
             .background { NotebookRules(seed: seed) }
-            .background(Color.chineseRoomCard, in: PencilRectangleShape(seed: seed))
+            .background(Color.chineseRoomSurface, in: PencilRectangleShape(seed: seed))
             .clipShape(PencilRectangleShape(seed: seed))
             .mask {
-                PaperCylinderCutout(seed: seed, displacement: onToggleSaved != nil || isSaved ? curlDisplacement : .zero)
+                PaperCylinderCutout(seed: seed, displacement: onToggleSaved != nil || isSaved ? curlDisplacement : .zero, includeFront: true)
             }
             .overlay {
                 PencilRectangle(seed: seed)
@@ -457,7 +457,19 @@ private struct CylinderPaperGeometry {
                 points.append(element.pointee.points[0])
             }
         }
-        vertices = points
+        // Sample the original edges before projection so curved silhouettes
+        // stay smooth without rendering the surface as separate painted strips.
+        var sampled: [CGPoint] = []
+        if let last = points.last {
+            for (a, b) in zip([last] + points, points) {
+                let count = max(1, Int(ceil(hypot(b.x - a.x, b.y - a.y))))
+                for i in 0..<count {
+                    let t = CGFloat(i) / CGFloat(count)
+                    sampled.append(CGPoint(x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t))
+                }
+            }
+        }
+        vertices = sampled
         let normal = CGVector(dx: -displacement.width, dy: -displacement.height)
         let tip = points.max { $0.x * normal.dx + $0.y * normal.dy < $1.x * normal.dx + $1.y * normal.dy } ?? CGPoint(x: size.width, y: 0)
         cylinder = PaperCylinder(corner: tip, displacement: displacement)
@@ -489,6 +501,7 @@ private struct CylinderPaperGeometry {
 private struct PaperCylinderCutout: Shape {
     let seed: UUID
     var displacement: CGSize
+    var includeFront = false
     var animatableData: AnimatablePair<CGFloat, CGFloat> {
         get { AnimatablePair(displacement.width, displacement.height) }
         set { displacement = CGSize(width: newValue.first, height: newValue.second) }
@@ -500,7 +513,16 @@ private struct PaperCylinderCutout: Shape {
         // here would shave half the graphite off every unaffected card edge.
         let bounds = [CGPoint(x: -8, y: -8), CGPoint(x: rect.width + 8, y: -8),
                       CGPoint(x: rect.width + 8, y: rect.height + 8), CGPoint(x: -8, y: rect.height + 8)]
-        return CylinderPaperGeometry.path(paper.cylinder.clip(bounds, at: 0, above: false))
+        // Keep one point of paper beneath the tangent join so independently
+        // antialiased masks cannot expose a diagonal hairline of background.
+        let flat = CylinderPaperGeometry.path(paper.cylinder.clip(bounds, at: 1, above: false))
+        guard includeFront else { return flat }
+        // The message UI continues across the front of the bend. Its mask
+        // follows the visible paper silhouette, not the cylinder's start axis.
+        let front = paper.cylinder.clip(paper.cylinder.clip(paper.vertices, at: 0, above: true),
+                                       at: .pi * paper.cylinder.radius / 2, above: false)
+        let projected = CylinderPaperGeometry.path(front.map { paper.cylinder.project($0).point })
+        return flat.union(projected)
     }
 }
 
@@ -520,32 +542,11 @@ private struct PaperCylinderSurface: View, Animatable {
             ZStack(alignment: .topLeading) {
                 Canvas { context, _ in
                     guard hypot(displacement.width, displacement.height) > 0.1 else { return }
-                    // Subdivide in surface coordinates, including the tangent boundary
-                    // between front and back, before projecting into the screen.
-                    let maximum = lifted.map { cylinder.distance($0) }.max() ?? 0
                     let bendEnd = .pi * cylinder.radius
-                    let intervals = (0...48).map { CGFloat($0) * bendEnd / 48 } + [max(bendEnd, maximum)]
-                    // Only the elevated backside casts a shadow. Shadowing the
-                    // whole patch also shadowed its artificial straight closing
-                    // edge at the flat-sheet boundary, creating a diagonal seam.
-                    let raised = cylinder.clip(lifted, at: bendEnd / 2, above: true)
-                    let shadowPoints = raised.map { cylinder.project($0).point }
-                    var shadow = context
-                    shadow.addFilter(.shadow(color: Color.chineseRoomInk.opacity(0.15), radius: cylinder.radius * 0.45, x: -1, y: cylinder.radius * 0.6, options: .shadowOnly))
-                    shadow.fill(CylinderPaperGeometry.path(shadowPoints), with: .color(Color.chineseRoomSurface))
-                    for (lower, upper) in zip(intervals, intervals.dropFirst()) where upper > lower {
-                        let polygon = cylinder.clip(cylinder.clip(lifted, at: lower, above: true), at: upper, above: false)
-                        guard polygon.count >= 3 else { continue }
-                        let projected = polygon.map { cylinder.project($0).point }
-                        let path = CylinderPaperGeometry.path(projected)
-                        let angle = min(.pi, (lower + upper) / 2 / cylinder.radius)
-                        let back = angle > .pi / 2
-                        context.fill(path, with: .color(back ? Color.chineseRoomFold : Color.chineseRoomSurface))
-                        // A narrow overlap prevents rasterization cracks between strips.
-                        context.stroke(path, with: .color(back ? Color.chineseRoomFold : Color.chineseRoomSurface), lineWidth: 0.5)
-                        let shade = sin(angle) * 0.12
-                        context.fill(path, with: .color(Color.chineseRoomInk.opacity(shade)))
-                    }
+                    let back = cylinder.clip(lifted, at: bendEnd / 2, above: true)
+                    let backPath = CylinderPaperGeometry.path(back.map { cylinder.project($0).point })
+                    context.fill(backPath, with: .color(Color.chineseRoomFold))
+
                 }
                 PencilJoinedFoldOutline(seed: seed, contours: [edge])
                     .opacity(hypot(displacement.width, displacement.height) > 0.1 ? 1 : 0)
