@@ -63,7 +63,9 @@ its paper coordinates. The tip target follows diagonal progress and the finger's
 movement along the curl; changing that target rotates the curl axis, so both
 joins come from the same surface rather than independent edge offsets.
 The front, yellow backside, silhouette and pencil contours are projected
-from that surface. The lifted corner has no cast shadow or surface-darkening gradient. Unsaved sheets have a completely flat corner. Saving gives
+from that surface. The entire border is a single projected pencil stroke while
+curled, so the joins have no independently clipped stroke ends. The lifted
+corner has no cast shadow or surface-darkening gradient. Unsaved sheets have a completely flat corner. Saving gives
 a light haptic. This is a geometric page-curl approximation, not a material
 physics simulation. Message text and notebook rules stay visible through the
 front of the bend and are clipped at the projected silhouette, not the bend's

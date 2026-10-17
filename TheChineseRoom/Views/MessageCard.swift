@@ -375,8 +375,9 @@ struct MessagePaper<Content: View>: View {
                 PaperCylinderCutout(seed: seed, displacement: onToggleSaved != nil || isSaved ? curlDisplacement : .zero, includeFront: true)
             }
             .overlay {
-                PencilRectangle(seed: seed)
-                    .mask(PaperCylinderCutout(seed: seed, displacement: onToggleSaved != nil || isSaved ? curlDisplacement : .zero))
+                if onToggleSaved == nil && !isSaved || hypot(curlDisplacement.width, curlDisplacement.height) <= 0.1 {
+                    PencilRectangle(seed: seed)
+                }
             }
             .overlay(alignment: .topTrailing) {
                 if onToggleSaved != nil || isSaved {
@@ -474,19 +475,10 @@ private struct CylinderPaperGeometry {
         let tip = points.max { $0.x * normal.dx + $0.y * normal.dy < $1.x * normal.dx + $1.y * normal.dy } ?? CGPoint(x: size.width, y: 0)
         cylinder = PaperCylinder(corner: tip, displacement: displacement)
     }
-    var liftedEdge: [CGPoint] {
-        var edge: [CGPoint] = []
-        if let last = vertices.last {
-            for (a, b) in zip([last] + vertices, vertices) {
-                let count = max(1, Int(ceil(hypot(b.x - a.x, b.y - a.y))))
-                for i in 0..<count {
-                    let t = CGFloat(i) / CGFloat(count)
-                    let p = CGPoint(x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t)
-                    if cylinder.distance(p) > 0 { edge.append(cylinder.project(p).point) }
-                }
-            }
-        }
-        return edge
+    var projectedOutline: [CGPoint] {
+        let edge = vertices.map { cylinder.project($0).point }
+        guard let first = edge.first else { return [] }
+        return edge + [first]
     }
     static func path(_ points: [CGPoint], closed: Bool = true) -> Path {
         Path { path in
@@ -538,7 +530,7 @@ private struct PaperCylinderSurface: View, Animatable {
             let paper = CylinderPaperGeometry(seed: seed, size: proxy.size, displacement: displacement)
             let cylinder = paper.cylinder
             let lifted = cylinder.clip(paper.vertices, at: 0, above: true)
-            let edge = paper.liftedEdge
+            let edge = paper.projectedOutline
             ZStack(alignment: .topLeading) {
                 Canvas { context, _ in
                     guard hypot(displacement.width, displacement.height) > 0.1 else { return }
