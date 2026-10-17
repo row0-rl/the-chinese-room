@@ -56,7 +56,7 @@ to a create-or-restore screen. Cross-launch message history is enabled.
 Tap a message sheet’s top-right corner to toggle saving immediately.
 Drag that corner down-left to save the expression, or
 up-right to unsave. The fold follows the finger and settles to the nearest state
-on release; corner drags do not page the feed. The saved fold rests at 48 points,
+on release; corner drags do not page the feed. The saved fold rests at 64 points,
 can stretch to 160 points while dragging, and springs back to its resting size
 on release. A cylindrical surface model bends the corner without stretching
 its paper coordinates. The tip target follows diagonal progress and the finger's
@@ -64,8 +64,15 @@ movement along the curl; changing that target rotates the curl axis, so both
 joins come from the same surface rather than independent edge offsets.
 The front, yellow backside, silhouette and pencil contours are projected
 from that surface. The entire border is a single projected pencil stroke while
-curled, so the joins have no independently clipped stroke ends. The lifted
-corner has no cast shadow or surface-darkening gradient. Unsaved sheets have a completely flat corner. Saving gives
+curled, so the joins have no independently clipped stroke ends. Pencil textures
+are prepared once in flat paper coordinates and projected in Canvas with the
+current curl pose; dragging never waits for a newly rasterized outline. The
+canvas covers the full projected paper bounds, including overflow beyond short
+cards. Front ink, opaque backside fill, and back ink render in depth order so
+the original bottom border cannot show through the lifted paper. The lifted
+corner has no cast shadow or surface-darkening gradient. The diagonal curl
+silhouette has a separate thin 0.8-point pencil outline (the sheet border uses
+3.3 points). Unsaved sheets have a completely flat corner. Saving gives
 a light haptic. This is a geometric page-curl approximation, not a material
 physics simulation. Message text and notebook rules stay visible through the
 front of the bend and are clipped at the projected silhouette, not the bend's

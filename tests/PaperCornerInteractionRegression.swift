@@ -14,7 +14,7 @@ import Foundation
         precondition(progress(false, -100, 100) > 1 && progress(true, 100, -100) == 0)
         precondition(progress(false, -1000, 1000) == PaperCornerInteraction.maximumProgress)
         precondition(progress(true, -1000, 1000) == PaperCornerInteraction.maximumProgress)
-        precondition(PaperCornerInteraction.maximumProgress > 3)
+        precondition(PaperCornerInteraction.maximumProgress * PaperCornerInteraction.savedFoldSize == 160)
         precondition(progress(false, 40, 40) == 0, "Motion perpendicular to the fold must not save")
         precondition(progress(true, -40, -40) == 1)
         // The cylindrical surface meets the flat sheet with the same tangent,
@@ -51,11 +51,41 @@ import Foundation
         precondition(-raised.depth / raised.normal.dy > -rest.depth / rest.normal.dy, "Raising the tip must lower the right-edge join")
         precondition(lowered.depth / lowered.normal.dx > rest.depth / rest.normal.dx, "Lowering the tip must move the top-edge join left")
         precondition(PaperCornerInteraction.displacement(foldSize: 0, translation: CGSize(width: -50, height: 50)) == .zero)
+        // Texture warping must match the current surface pose when reversing
+        // from either extreme; no rendered image from an older pose is needed.
+        for delta in [CGSize(width: -112, height: 112), CGSize(width: -90, height: 90),
+                      CGSize(width: -56, height: 15), CGSize(width: -34, height: 34),
+                      CGSize(width: -2, height: 2), CGSize(width: -10, height: 10),
+                      CGSize(width: -34, height: 34)] {
+            let curl = PaperCylinder(corner: corner, displacement: delta)
+            let origin = CGPoint(x: corner.x - curl.normal.dx * curl.depth, y: corner.y - curl.normal.dy * curl.depth)
+            let end = .pi * curl.radius
+            for index in 0..<48 {
+                let lower = CGFloat(index) * end / 48, upper = CGFloat(index + 1) * end / 48
+                let transform = curl.bandTransform(lower: lower, upper: upper)
+                for q in [lower, (lower + upper) / 2, upper] {
+                    let source = CGPoint(x: origin.x + curl.normal.dx * q - curl.normal.dy * 17,
+                                         y: origin.y + curl.normal.dy * q + curl.normal.dx * 17)
+                    let warped = source.applying(transform), exact = curl.project(source).point
+                    precondition(hypot(warped.x - exact.x, warped.y - exact.y) < 0.02)
+                }
+            }
+            let tip = corner.applying(curl.bandTransform(lower: end, upper: max(end + 1, curl.depth + 1)))
+            precondition(hypot(tip.x - corner.x - delta.width, tip.y - corner.y - delta.height) < 0.00001)
+        }
+        let shortSize = CGSize(width: 350, height: 120)
+        let shortVertices = [CGPoint(x: 0, y: 0), CGPoint(x: 350, y: 0), CGPoint(x: 350, y: 120), CGPoint(x: 0, y: 120)]
+        let shortCurl = PaperCylinder(corner: CGPoint(x: 350, y: 0), displacement: CGSize(width: -37, height: 137))
+        let drawingBounds = shortCurl.drawingBounds(vertices: shortVertices, paperSize: shortSize)
+        precondition(shortCurl.project(CGPoint(x: 350, y: 0)).point.y > shortSize.height)
+        for point in shortVertices {
+            precondition(drawingBounds.contains(shortCurl.project(point).point), "Backside and ink must not be clipped to the original short card")
+        }
         let frame = CGRect(x: 20, y: 150, width: 360, height: 250)
         precondition(PaperCornerInteraction.startsInCorner(CGPoint(x: 365, y: 160), paperFrame: frame))
         precondition(!PaperCornerInteraction.startsInCorner(CGPoint(x: 200, y: 160), paperFrame: frame))
         precondition(!PaperCornerInteraction.startsInCorner(CGPoint(x: 365, y: 235), paperFrame: frame))
         precondition(!PaperCornerInteraction.startsInCorner(CGPoint(x: 365, y: 140), paperFrame: frame))
-        print("PASS: curl target tracking, tangent joins, surface arc length, save thresholds, and feed hit regions")
+        print("PASS: curl target tracking, tangent joins, surface arc length, live texture projection on reversal, save thresholds, and feed hit regions")
     }
 }

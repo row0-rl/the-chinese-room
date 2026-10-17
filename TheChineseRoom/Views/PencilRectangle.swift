@@ -70,38 +70,89 @@ struct PencilRectangle: View {
     }
 }
 
-/// Render projected paper contours with the same graphite as the flat sheet.
-struct PencilJoinedFoldOutline: View {
+/// The pencil texture is rendered once in paper coordinates. All deformation
+/// happens synchronously in Canvas using the same pose as the paper fill.
+struct PencilCurledSheetOutline: View {
     let seed: UUID
-    let contours: [[CGPoint]]
+    let paperSize: CGSize
+    let vertices: [CGPoint]
+    let cylinder: PaperCylinder
+    let crest: [CGPoint]
+    let backFace: [CGPoint]
+    let drawingBounds: CGRect
     @Environment(\.displayScale) private var displayScale
-    @State private var rendered: (image: UIImage, bounds: CGRect)?
+    @State private var sheetTexture: UIImage?
+    @State private var creaseTexture: UIImage?
 
     var body: some View {
-        let vertices = contours.flatMap { $0 }
-        let minX = (vertices.map(\.x).min() ?? 0) - 8
-        let minY = (vertices.map(\.y).min() ?? 0) - 8
-        let bounds = CGRect(x: minX, y: minY,
-            width: (vertices.map(\.x).max() ?? 0) - minX + 8,
-            height: (vertices.map(\.y).max() ?? 0) - minY + 8)
-        let paths = contours.map { $0.map { PencilBorderPoint(x: $0.x - minX, y: $0.y - minY) } }
-        let request = PencilBorderRequest(seed: seed, size: bounds.size, scale: displayScale,
-            cornerRadius: 0, lineWidth: 3.3, wobble: 0, foldContours: paths, isFold: true)
-        GeometryReader { _ in
-            if let rendered {
-                Image(uiImage: rendered.image).renderingMode(.template).resizable()
-                    .foregroundStyle(Color.chineseRoomInk)
-                    .frame(width: rendered.bounds.width, height: rendered.bounds.height)
-                    .position(x: rendered.bounds.midX, y: rendered.bounds.midY)
+        let source = CGRect(x: -8, y: -8, width: paperSize.width + 16, height: paperSize.height + 16)
+        let contour = (vertices + Array(vertices.prefix(1))).map { PencilBorderPoint(x: $0.x + 8, y: $0.y + 8) }
+        let sheetRequest = PencilBorderRequest(seed: seed, size: source.size, scale: displayScale,
+            cornerRadius: 0, lineWidth: 3.3, wobble: 0, foldContours: [contour], isFold: true)
+        let creaseRequest = PencilBorderRequest(seed: seed, size: CGSize(width: 272, height: 16), scale: displayScale,
+            cornerRadius: 0, lineWidth: 0.8, wobble: 0,
+            foldContours: [[PencilBorderPoint(x: 8, y: 8), PencilBorderPoint(x: 264, y: 8)]], isFold: true)
+        Canvas { context, _ in
+            context.translateBy(x: -drawingBounds.minX, y: -drawingBounds.minY)
+            let backPath = Path { path in
+                path.addLines(backFace)
+                path.closeSubpath()
+            }
+            // Front ink is beneath the raised backside; back ink and the
+            // crease are above it. All share one expanded drawing surface.
+            var paintedBack = false
+            if let sheetTexture {
+                var texture = context.resolve(Image(uiImage: sheetTexture))
+                texture.shading = .color(Color.chineseRoomInk)
+                let bounds = [CGPoint(x: source.minX, y: source.minY), CGPoint(x: source.maxX, y: source.minY),
+                              CGPoint(x: source.maxX, y: source.maxY), CGPoint(x: source.minX, y: source.maxY)]
+                let distances = bounds.map { cylinder.distance($0) }
+                let bendEnd = .pi * cylinder.radius
+                let stops = [min(-1, distances.min() ?? -1)] + (0...48).map { CGFloat($0) * bendEnd / 48 }
+                    + [max(bendEnd + 1, distances.max() ?? bendEnd + 1)]
+                for (lower, upper) in zip(stops, stops.dropFirst()) where upper - lower > 0.00001 {
+                    if !paintedBack, lower >= bendEnd / 2 - 0.00001 {
+                        context.fill(backPath, with: .color(Color.chineseRoomFold))
+                        paintedBack = true
+                    }
+                    let transform = cylinder.bandTransform(lower: lower, upper: upper)
+                    let polygon = cylinder.clip(cylinder.clip(bounds, at: lower - 0.03, above: true), at: upper + 0.03, above: false)
+                    guard polygon.count >= 3 else { continue }
+                    let path = Path { path in
+                        path.addLines(polygon.map { $0.applying(transform) })
+                        path.closeSubpath()
+                    }
+                    var band = context
+                    band.opacity = 0.55
+                    band.clip(to: path)
+                    band.concatenate(transform)
+                    band.draw(texture, in: source)
+                }
+            }
+            if !paintedBack { context.fill(backPath, with: .color(Color.chineseRoomFold)) }
+            if let creaseTexture, let start = crest.first, let end = crest.last {
+                let dx = end.x - start.x, dy = end.y - start.y
+                let length = hypot(dx, dy)
+                if length > 0.001 {
+                    var texture = context.resolve(Image(uiImage: creaseTexture))
+                    texture.shading = .color(Color.chineseRoomInk)
+                    var crease = context
+                    crease.opacity = 0.55
+                    crease.concatenate(CGAffineTransform(a: dx / 256, b: dy / 256,
+                        c: -dy / length, d: dx / length, tx: start.x, ty: start.y))
+                    crease.draw(texture, in: CGRect(x: -8, y: -8, width: 272, height: 16))
+                }
             }
         }
-        .opacity(0.55)
         .allowsHitTesting(false)
         .accessibilityHidden(true)
-        .task(id: request) {
-            guard !vertices.isEmpty else { rendered = nil; return }
-            guard let image = await PencilBorderRenderer.shared.image(for: request), !Task.isCancelled else { return }
-            rendered = (image, bounds)
+        .task(id: sheetRequest) {
+            guard let image = await PencilBorderRenderer.shared.image(for: sheetRequest), !Task.isCancelled else { return }
+            sheetTexture = image
+        }
+        .task(id: creaseRequest) {
+            guard let image = await PencilBorderRenderer.shared.image(for: creaseRequest), !Task.isCancelled else { return }
+            creaseTexture = image
         }
     }
 }

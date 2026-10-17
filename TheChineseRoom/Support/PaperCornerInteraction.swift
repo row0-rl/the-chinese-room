@@ -4,7 +4,7 @@ import CoreGraphics
 /// Diagonal corner movement is independent of the feed's vertical movement.
 enum PaperCornerInteraction {
     static let hitSize: CGFloat = 76
-    static let savedFoldSize: CGFloat = 48
+    static let savedFoldSize: CGFloat = 64
     static let maximumFoldSize: CGFloat = 160
     static var maximumProgress: CGFloat { maximumFoldSize / savedFoldSize }
     static let travel: CGFloat = 72
@@ -56,6 +56,34 @@ struct PaperCylinder {
         return (CGPoint(x: p.x + normal.dx * (bent - q),
                         y: p.y + normal.dy * (bent - q)),
                 radius * (1 - cos(angle)), cos(angle))
+    }
+
+    func drawingBounds(vertices: [CGPoint], paperSize: CGSize) -> CGRect {
+        let projected = vertices.map { project($0).point }
+        let minX = min(0, projected.map(\.x).min() ?? 0)
+        let minY = min(0, projected.map(\.y).min() ?? 0)
+        let maxX = max(paperSize.width, projected.map(\.x).max() ?? paperSize.width)
+        let maxY = max(paperSize.height, projected.map(\.y).max() ?? paperSize.height)
+        return CGRect(x: minX, y: minY, width: maxX - minX, height: maxY - minY).insetBy(dx: -12, dy: -12)
+    }
+
+    /// Affine projection of one narrow surface band. Its two boundaries match
+    /// the cylinder exactly; intermediate points approximate the circular arc.
+    func bandTransform(lower: CGFloat, upper: CGFloat) -> CGAffineTransform {
+        func bent(_ q: CGFloat) -> CGFloat {
+            if q <= 0 { return q }
+            if q >= .pi * radius { return -(q - .pi * radius) }
+            return radius * sin(q / radius)
+        }
+        let slope = (bent(upper) - bent(lower)) / max(0.00001, upper - lower)
+        let intercept = bent(lower) - slope * lower
+        let k = depth - corner.x * normal.dx - corner.y * normal.dy
+        let shift = (slope - 1) * k + intercept
+        return CGAffineTransform(a: 1 + (slope - 1) * normal.dx * normal.dx,
+                                 b: (slope - 1) * normal.dx * normal.dy,
+                                 c: (slope - 1) * normal.dx * normal.dy,
+                                 d: 1 + (slope - 1) * normal.dy * normal.dy,
+                                 tx: normal.dx * shift, ty: normal.dy * shift)
     }
 
     func clip(_ polygon: [CGPoint], at value: CGFloat, above: Bool) -> [CGPoint] {

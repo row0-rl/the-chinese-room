@@ -355,6 +355,7 @@ struct MessagePaper<Content: View>: View {
             let args = ProcessInfo.processInfo.arguments
             if args.contains("--corner-joins-up-preview") { return CGSize(width: -70, height: -60) }
             if args.contains("--corner-joins-down-preview") { return CGSize(width: -70, height: 60) }
+            if args.contains("--corner-short-down-preview") { return CGSize(width: 70, height: 230) }
             if args.contains("--corner-large-preview") { return CGSize(width: -140, height: 140) }
         }
         #endif
@@ -366,8 +367,15 @@ struct MessagePaper<Content: View>: View {
     private var foldProgress: CGFloat { cornerDragProgress ?? (isSaved ? 1 : 0) }
     private var foldSize: CGFloat { PaperCornerInteraction.savedFoldSize * foldProgress }
 
+    private var paperHeightLimit: CGFloat {
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("--corner-short-down-preview") { return min(140, maximumHeight) }
+        #endif
+        return maximumHeight
+    }
+
     var body: some View {
-        CappedCardScroll(maximumHeight: maximumHeight, resetScroll: resetScroll, content: content)
+        CappedCardScroll(maximumHeight: paperHeightLimit, resetScroll: resetScroll, content: content)
             .background { NotebookRules(seed: seed) }
             .background(Color.chineseRoomSurface, in: PencilRectangleShape(seed: seed))
             .clipShape(PencilRectangleShape(seed: seed))
@@ -475,10 +483,11 @@ private struct CylinderPaperGeometry {
         let tip = points.max { $0.x * normal.dx + $0.y * normal.dy < $1.x * normal.dx + $1.y * normal.dy } ?? CGPoint(x: size.width, y: 0)
         cylinder = PaperCylinder(corner: tip, displacement: displacement)
     }
-    var projectedOutline: [CGPoint] {
-        let edge = vertices.map { cylinder.project($0).point }
-        guard let first = edge.first else { return [] }
-        return edge + [first]
+    var crest: [CGPoint] {
+        let distance = .pi * cylinder.radius / 2
+        return cylinder.clip(vertices, at: distance, above: true)
+            .filter { abs(cylinder.distance($0) - distance) < 0.001 }
+            .map { cylinder.project($0).point }
     }
     static func path(_ points: [CGPoint], closed: Bool = true) -> Path {
         Path { path in
@@ -530,19 +539,16 @@ private struct PaperCylinderSurface: View, Animatable {
             let paper = CylinderPaperGeometry(seed: seed, size: proxy.size, displacement: displacement)
             let cylinder = paper.cylinder
             let lifted = cylinder.clip(paper.vertices, at: 0, above: true)
-            let edge = paper.projectedOutline
-            ZStack(alignment: .topLeading) {
-                Canvas { context, _ in
-                    guard hypot(displacement.width, displacement.height) > 0.1 else { return }
-                    let bendEnd = .pi * cylinder.radius
-                    let back = cylinder.clip(lifted, at: bendEnd / 2, above: true)
-                    let backPath = CylinderPaperGeometry.path(back.map { cylinder.project($0).point })
-                    context.fill(backPath, with: .color(Color.chineseRoomFold))
+            let back = cylinder.clip(lifted, at: .pi * cylinder.radius / 2, above: true)
+            let backFace = back.map { cylinder.project($0).point }
+            let drawingBounds = cylinder.drawingBounds(vertices: paper.vertices, paperSize: proxy.size)
+            PencilCurledSheetOutline(seed: seed, paperSize: proxy.size, vertices: paper.vertices,
+                                    cylinder: cylinder, crest: paper.crest, backFace: backFace,
+                                    drawingBounds: drawingBounds)
+                .frame(width: drawingBounds.width, height: drawingBounds.height)
+                .offset(x: drawingBounds.minX, y: drawingBounds.minY)
+                .opacity(hypot(displacement.width, displacement.height) > 0.1 ? 1 : 0)
 
-                }
-                PencilJoinedFoldOutline(seed: seed, contours: [edge])
-                    .opacity(hypot(displacement.width, displacement.height) > 0.1 ? 1 : 0)
-            }
         }
     }
 }
