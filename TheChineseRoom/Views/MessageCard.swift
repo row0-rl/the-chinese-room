@@ -20,6 +20,7 @@ struct MessageCard: View {
         MessageCardRevealLayout(progress: revealProgress, edge: previewEdge, visibleHeight: max(0, maximumHeight - PencilRectangle.contentInset * 2)) {
             InkText(message.normalizedSourceText)
                 .appFont(.title3)
+                .padding(.trailing, 22)
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -332,14 +333,224 @@ struct MessagePaper<Content: View>: View {
     let seed: UUID
     let maximumHeight: CGFloat
     var resetScroll = false
+    var isSaved = false
+    let appStrings: AppStrings
+    var onToggleSaved: (() -> Void)? = nil
     @ViewBuilder let content: () -> Content
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @AppStorage("hasFoldedMessageCorner") private var hasFoldedCorner = false
+    @GestureState private var cornerDragTranslation: CGSize?
+    @State private var feedbackID: UUID?
+    @State private var feedback: String?
+
+    private var cornerDragProgress: CGFloat? {
+        if cornerDragTranslation != nil || curlTranslation != .zero {
+            return PaperCornerInteraction.progress(isSaved: isSaved, translation: curlTranslation)
+        }
+        return nil
+    }
+    private var curlTranslation: CGSize {
+        #if DEBUG
+        if cornerDragTranslation == nil {
+            let args = ProcessInfo.processInfo.arguments
+            if args.contains("--corner-joins-up-preview") { return CGSize(width: -70, height: -60) }
+            if args.contains("--corner-joins-down-preview") { return CGSize(width: -70, height: 60) }
+            if args.contains("--corner-large-preview") { return CGSize(width: -140, height: 140) }
+        }
+        #endif
+        return cornerDragTranslation ?? .zero
+    }
+    private var curlDisplacement: CGSize {
+        PaperCornerInteraction.displacement(foldSize: foldSize, translation: curlTranslation)
+    }
+    private var foldProgress: CGFloat { cornerDragProgress ?? (isSaved ? 1 : 0) }
+    private var foldSize: CGFloat { PaperCornerInteraction.savedFoldSize * foldProgress }
 
     var body: some View {
         CappedCardScroll(maximumHeight: maximumHeight, resetScroll: resetScroll, content: content)
             .background { NotebookRules(seed: seed) }
             .background(Color.chineseRoomCard, in: PencilRectangleShape(seed: seed))
             .clipShape(PencilRectangleShape(seed: seed))
-            .overlay(PencilRectangle(seed: seed))
+            .mask {
+                PaperCylinderCutout(seed: seed, displacement: onToggleSaved != nil || isSaved ? curlDisplacement : .zero)
+            }
+            .overlay {
+                PencilRectangle(seed: seed)
+                    .mask(PaperCylinderCutout(seed: seed, displacement: onToggleSaved != nil || isSaved ? curlDisplacement : .zero))
+            }
+            .overlay(alignment: .topTrailing) {
+                if onToggleSaved != nil || isSaved {
+                    PaperCylinderSurface(seed: seed, displacement: curlDisplacement)
+                        .allowsHitTesting(false)
+                        .accessibilityHidden(true)
+                }
+            }
+            .animation(reduceMotion ? .easeOut(duration: 0.12) : .spring(duration: 0.38, bounce: 0.16), value: isSaved)
+            .animation(reduceMotion ? .easeOut(duration: 0.12) : .spring(duration: 0.5, bounce: 0.28), value: cornerDragProgress == nil)
+            .overlay(alignment: .topTrailing) {
+                if let onToggleSaved, !resetScroll {
+                    Color.clear
+                        .frame(width: PaperCornerInteraction.hitSize, height: PaperCornerInteraction.hitSize)
+                        .contentShape(Rectangle())
+                        .highPriorityGesture(
+                            DragGesture(minimumDistance: 6)
+                                .exclusively(before: TapGesture())
+                                .updating($cornerDragTranslation) { value, translation, transaction in
+                                    guard case .first(let drag) = value else { return }
+                                    transaction.animation = nil
+                                    translation = drag.translation
+                                }
+                                .onEnded { value in
+                                    switch value {
+                                    case .first(let drag):
+                                        let saved = PaperCornerInteraction.progress(isSaved: isSaved, translation: drag.translation) >= 0.5
+                                        if saved != isSaved { commitSaveToggle(onToggleSaved) }
+                                    case .second:
+                                        commitSaveToggle(onToggleSaved)
+                                    }
+                                }
+                        )
+                        .accessibilityAddTraits(.isButton)
+                        .accessibilityAction { commitSaveToggle(onToggleSaved) }
+                        .accessibilityLabel(isSaved ? appStrings.unsaveExpression : appStrings.saveExpression)
+                        .accessibilityHint(isSaved ? appStrings.unfoldCornerHint : appStrings.foldCornerHint)
+                        .accessibilityIdentifier("message-save-corner")
+                }
+            }
+            .overlay(alignment: .topTrailing) {
+                if onToggleSaved != nil, !resetScroll,
+                   let label = feedback ?? (!hasFoldedCorner && !isSaved ? appStrings.foldCornerHint : nil) {
+                    Text(label)
+                        .appFont(.caption)
+                        .foregroundStyle(Color.chineseRoomInk.opacity(0.7))
+                        .padding(.trailing, 16)
+                        .offset(y: -20)
+                        .allowsHitTesting(false)
+                        .accessibilityHidden(true)
+                }
+            }
+            .task(id: feedbackID) {
+                guard feedbackID != nil else { return }
+                do { try await Task.sleep(for: .seconds(2)) }
+                catch { return }
+                feedback = nil
+            }
+    }
+
+    private func commitSaveToggle(_ action: () -> Void) {
+        action()
+        hasFoldedCorner = true
+        feedback = isSaved ? appStrings.expressionUnsaved : appStrings.expressionSaved
+        feedbackID = UUID()
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+    }
+}
+
+/// Every visible edge and face is projected from the same bent paper surface.
+private struct CylinderPaperGeometry {
+    let vertices: [CGPoint]
+    let cylinder: PaperCylinder
+    init(seed: UUID, size: CGSize, displacement: CGSize) {
+        var points: [CGPoint] = []
+        PencilRectangleShape(seed: seed).path(in: CGRect(origin: .zero, size: size)).cgPath.applyWithBlock { element in
+            if element.pointee.type == .moveToPoint || element.pointee.type == .addLineToPoint {
+                points.append(element.pointee.points[0])
+            }
+        }
+        vertices = points
+        let normal = CGVector(dx: -displacement.width, dy: -displacement.height)
+        let tip = points.max { $0.x * normal.dx + $0.y * normal.dy < $1.x * normal.dx + $1.y * normal.dy } ?? CGPoint(x: size.width, y: 0)
+        cylinder = PaperCylinder(corner: tip, displacement: displacement)
+    }
+    var liftedEdge: [CGPoint] {
+        var edge: [CGPoint] = []
+        if let last = vertices.last {
+            for (a, b) in zip([last] + vertices, vertices) {
+                let count = max(1, Int(ceil(hypot(b.x - a.x, b.y - a.y))))
+                for i in 0..<count {
+                    let t = CGFloat(i) / CGFloat(count)
+                    let p = CGPoint(x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t)
+                    if cylinder.distance(p) > 0 { edge.append(cylinder.project(p).point) }
+                }
+            }
+        }
+        return edge
+    }
+    static func path(_ points: [CGPoint], closed: Bool = true) -> Path {
+        Path { path in
+            guard let first = points.first else { return }
+            path.move(to: first)
+            for point in points.dropFirst() { path.addLine(to: point) }
+            if closed { path.closeSubpath() }
+        }
+    }
+}
+
+private struct PaperCylinderCutout: Shape {
+    let seed: UUID
+    var displacement: CGSize
+    var animatableData: AnimatablePair<CGFloat, CGFloat> {
+        get { AnimatablePair(displacement.width, displacement.height) }
+        set { displacement = CGSize(width: newValue.first, height: newValue.second) }
+    }
+    func path(in rect: CGRect) -> Path {
+        guard hypot(displacement.width, displacement.height) > 0.1 else { return Path(rect) }
+        let paper = CylinderPaperGeometry(seed: seed, size: rect.size, displacement: displacement)
+        // Mask only the bending half-plane; clipping to the pencil centerline
+        // here would shave half the graphite off every unaffected card edge.
+        let bounds = [CGPoint(x: -8, y: -8), CGPoint(x: rect.width + 8, y: -8),
+                      CGPoint(x: rect.width + 8, y: rect.height + 8), CGPoint(x: -8, y: rect.height + 8)]
+        return CylinderPaperGeometry.path(paper.cylinder.clip(bounds, at: 0, above: false))
+    }
+}
+
+private struct PaperCylinderSurface: View, Animatable {
+    let seed: UUID
+    var displacement: CGSize
+    var animatableData: AnimatablePair<CGFloat, CGFloat> {
+        get { AnimatablePair(displacement.width, displacement.height) }
+        set { displacement = CGSize(width: newValue.first, height: newValue.second) }
+    }
+    var body: some View {
+        GeometryReader { proxy in
+            let paper = CylinderPaperGeometry(seed: seed, size: proxy.size, displacement: displacement)
+            let cylinder = paper.cylinder
+            let lifted = cylinder.clip(paper.vertices, at: 0, above: true)
+            let edge = paper.liftedEdge
+            ZStack(alignment: .topLeading) {
+                Canvas { context, _ in
+                    guard hypot(displacement.width, displacement.height) > 0.1 else { return }
+                    // Subdivide in surface coordinates, including the tangent boundary
+                    // between front and back, before projecting into the screen.
+                    let maximum = lifted.map { cylinder.distance($0) }.max() ?? 0
+                    let bendEnd = .pi * cylinder.radius
+                    let intervals = (0...48).map { CGFloat($0) * bendEnd / 48 } + [max(bendEnd, maximum)]
+                    // Only the elevated backside casts a shadow. Shadowing the
+                    // whole patch also shadowed its artificial straight closing
+                    // edge at the flat-sheet boundary, creating a diagonal seam.
+                    let raised = cylinder.clip(lifted, at: bendEnd / 2, above: true)
+                    let shadowPoints = raised.map { cylinder.project($0).point }
+                    var shadow = context
+                    shadow.addFilter(.shadow(color: Color.chineseRoomInk.opacity(0.15), radius: cylinder.radius * 0.45, x: -1, y: cylinder.radius * 0.6, options: .shadowOnly))
+                    shadow.fill(CylinderPaperGeometry.path(shadowPoints), with: .color(Color.chineseRoomSurface))
+                    for (lower, upper) in zip(intervals, intervals.dropFirst()) where upper > lower {
+                        let polygon = cylinder.clip(cylinder.clip(lifted, at: lower, above: true), at: upper, above: false)
+                        guard polygon.count >= 3 else { continue }
+                        let projected = polygon.map { cylinder.project($0).point }
+                        let path = CylinderPaperGeometry.path(projected)
+                        let angle = min(.pi, (lower + upper) / 2 / cylinder.radius)
+                        let back = angle > .pi / 2
+                        context.fill(path, with: .color(back ? Color.chineseRoomFold : Color.chineseRoomSurface))
+                        // A narrow overlap prevents rasterization cracks between strips.
+                        context.stroke(path, with: .color(back ? Color.chineseRoomFold : Color.chineseRoomSurface), lineWidth: 0.5)
+                        let shade = sin(angle) * 0.12
+                        context.fill(path, with: .color(Color.chineseRoomInk.opacity(shade)))
+                    }
+                }
+                PencilJoinedFoldOutline(seed: seed, contours: [edge])
+                    .opacity(hypot(displacement.width, displacement.height) > 0.1 ? 1 : 0)
+            }
+        }
     }
 }
 
@@ -377,3 +588,31 @@ struct CappedCardScroll<Content: View>: View {
         }
     }
 }
+
+#if DEBUG
+/// A deterministic surface for inspecting the actual paper and fold together.
+struct MessagePaperFoldPreview: View {
+    @State private var isSaved = true
+    private let seed = UUID(uuidString: "00000000-0000-0000-0000-000000000003")!
+
+    var body: some View {
+        VStack(spacing: 40) {
+            MessagePaper(seed: seed, maximumHeight: 240, isSaved: isSaved,
+                         appStrings: AppStrings(localeIdentifier: "en"),
+                         onToggleSaved: { isSaved.toggle() }) {
+                VStack(alignment: .leading, spacing: 20) {
+                    Text("I want to remember this").appFont(.title3)
+                    Text("Je veux m’en souvenir").appExpressionFont(size: 35)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(PencilRectangle.contentInset)
+            }
+        }
+        .padding(24)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.chineseRoomBackground)
+    }
+}
+
+#Preview("Paper fold") { MessagePaperFoldPreview() }
+#endif

@@ -2,7 +2,6 @@ import Foundation
 import SwiftData
 
 // Replace device-only adapters while exercising the actual stores and SwiftData schema.
-enum AppAppearance { case system, light, dark }
 typealias OnDeviceSpeechService = SilentSpeechService
 typealias SystemDictationService = UnavailableDictationService
 typealias FoundationModelsMessageService = MockMessageService
@@ -124,6 +123,76 @@ struct AppleMessageRuntime {
         precondition(preservedSessions.count == 1,
             "Hiding invalid rooms must preserve stored history")
         print("PASS: every same-language pair, matching IDs with different metadata, and persisted invalid rooms are rejected")
+
+        precondition(LearningLanguage.allCases.count == 11)
+        precondition(Set(LanguageCatalog.allProfiles.map(\.id)).count == LanguageCatalog.allProfiles.count)
+        for language in LearningLanguage.allCases {
+            precondition(language.forms.count >= 2, "Every language needs an origin/form choice")
+            precondition(language.forms.first == language.defaultProfile, "The preferred default must be first in the menu")
+            let labels = language.forms.map { AppStrings(localeIdentifier: "en").originFormName($0) }
+            precondition(Set(labels).count == labels.count, "Each form must have a distinct picker label")
+            for form in language.forms {
+                precondition(LanguageCatalog.language(id: form.id) == form)
+                precondition(form.learningLanguage == language)
+            }
+        }
+        let british = LanguageCatalog.language(id: "english_uk")!
+        let mexican = LanguageCatalog.language(id: "spanish_mexico")!
+        let chilean = LanguageCatalog.language(id: "spanish_chile")!
+        let taiwanese = LanguageCatalog.language(id: "mandarin_taiwan")!
+        let cantonese = LanguageCatalog.language(id: "cantonese_hong_kong")!
+        let typicalPair = LanguageMode(source: british, target: chilean).defaultForms
+        precondition(typicalPair == LanguageMode(source: LanguageCatalog.englishUS, target: mexican))
+        precondition(mexican.needsRegionalAdaptation, "Changing the picker default must not skip Mexican wording adaptation")
+        precondition(LanguageCatalog.mode(id: "english_us__to__spanish_spain")?.target == LanguageCatalog.spanishSpain,
+            "The new Spanish default must preserve the meaning of legacy room IDs")
+        precondition(!LanguageMode(source: french.source, target: british).hasDistinctLanguages)
+        precondition(LanguageCatalog.mode(id: "english_us__to__english_uk") == nil)
+        precondition(LanguageCatalog.mode(id: "spanish_spain__to__spanish_chile") == nil)
+        precondition(LanguageCatalog.mode(id: "simplified_chinese__to__mandarin_taiwan") == nil)
+        precondition(taiwanese.normalizedWriting("我饿了") == "我餓了")
+        precondition(LanguageCatalog.simplifiedChinese.normalizedWriting("我餓了") == "我饿了")
+        precondition(PronunciationNotationSystem.fixedSystem(for: taiwanese) == .pinyin)
+        precondition(PronunciationNotationSystem.fixedSystem(for: cantonese) == .ipa)
+        precondition(AppLocale.forLanguage(taiwanese).id == "zh-Hant")
+        precondition(HanjaAnnotation.supports(LanguageMode(source: taiwanese, target: LanguageCatalog.koreanHangul)))
+        precondition(cantonese.modelLocaleIdentifier == "zh-Hant-HK" && cantonese.translationLocaleIdentifier == "zh-HK")
+        let chinesePair = LanguageMode(source: LanguageCatalog.simplifiedChinese, target: cantonese)
+        precondition(chinesePair.defaultForms == chinesePair)
+        let reverseChinesePair = LanguageMode(source: cantonese, target: taiwanese).defaultForms
+        precondition(reverseChinesePair.source == cantonese && reverseChinesePair.target == LanguageCatalog.simplifiedChinese,
+            "Defaults must retain the distinct Mandarin–Cantonese pairing")
+        precondition(chinesePair.hasDistinctLanguages && chinesePair.requiresDirectChineseTransformation)
+        precondition(LanguageCatalog.mode(id: chinesePair.id) == chinesePair)
+        for group in LearningLanguage.allCases {
+            for form in group.forms(excluding: british) { precondition(form.languageIdentity != "en") }
+        }
+
+        let regionalContainer = try ModelContainer(for: MessageSessionRecord.self, RoomRecord.self,
+            configurations: ModelConfiguration(isStoredInMemoryOnly: true))
+        let mexicoMode = LanguageMode(source: british, target: mexican)
+        let chileMode = LanguageMode(source: british, target: chilean)
+        let mexicoCard = MockMessageService.openingMessage(for: mexicoMode)
+        let chileCard = MockMessageService.openingMessage(for: chileMode)
+        regionalContainer.mainContext.insert(MessageSessionRecord(modeID: mexicoMode.id, currentIndex: 0, messages: [mexicoCard]))
+        regionalContainer.mainContext.insert(MessageSessionRecord(modeID: chileMode.id, currentIndex: 0, messages: [chileCard]))
+        try regionalContainer.mainContext.save()
+        let regionalRooms = RoomStore()
+        regionalRooms.attachPersistence(regionalContainer.mainContext, selectedMode: mexicoMode)
+        precondition(regionalRooms.activeRooms.count == 2)
+        precondition(regionalRooms.currentRoomID == mexicoMode.id)
+        let strings = AppStrings(localeIdentifier: "en")
+        precondition(regionalRooms.currentRoom!.pairLabel(strings: strings).contains("Mexico"))
+        precondition(regionalRooms.add(mexicoMode) === regionalRooms.currentRoom)
+        precondition(regionalRooms.add(LanguageMode(source: mexican, target: chilean)) == nil)
+        let regionalMessages = MessageStore(service: MockMessageService(), persistsMessageHistory: true, initialLanguageMode: mexicoMode)
+        regionalMessages.attachPersistence(regionalContainer.mainContext)
+        precondition(regionalMessages.currentMessage.id == mexicoCard.id)
+        regionalMessages.updateLanguageMode(chileMode)
+        precondition(regionalMessages.currentMessage.id == chileCard.id)
+        regionalMessages.updateLanguageMode(mexicoMode)
+        precondition(regionalMessages.currentMessage.id == mexicoCard.id)
+        print("PASS: form catalog, same-language exclusions, Chinese identities/scripts, origin labels, and isolated regional histories")
     }
 
     @MainActor private static func seedLegacyStore(url: URL, mode: LanguageMode, messages: [LearningMessage]) throws {

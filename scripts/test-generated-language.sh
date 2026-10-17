@@ -5,7 +5,8 @@ TEST_DIR="$(mktemp -d "${TMPDIR:-/tmp}/room-language-check.XXXXXX")"
 trap 'rm -rf "$TEST_DIR"' EXIT
 cd "$ROOT_DIR"
 xcrun swiftc -target "$(uname -m)-apple-macos26.0" \
-  TheChineseRoom/Models/LearningMessage.swift \
+  tests/Support/AppAppearanceStub.swift \
+  TheChineseRoom/Models/{LearningMessage,LanguageVariations}.swift \
   TheChineseRoom/Services/Messages/MessageService.swift \
   TheChineseRoom/Services/Messages/MockMessageService.swift \
   TheChineseRoom/Services/Messages/GeneratedLanguageCheck.swift \

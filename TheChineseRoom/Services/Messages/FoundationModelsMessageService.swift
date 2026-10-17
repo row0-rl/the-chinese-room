@@ -54,9 +54,22 @@ struct FoundationModelsMessageService: MessageService {
         }
 
         try Task.checkCancellation()
-        let sourceText = MessagePunctuation.clean(source.sourceText)
-        let translatedText = try await translator.translate(sourceText, languageMode: languageMode)
-        let targetText = MessagePunctuation.clean(translatedText)
+        let sourceText = MessagePunctuation.clean(languageMode.source.normalizedWriting(source.sourceText))
+        var translatedText = languageMode.requiresDirectChineseTransformation
+            ? sourceText : try await translator.translate(sourceText, languageMode: languageMode)
+        if languageMode.target.needsRegionalAdaptation || languageMode.requiresDirectChineseTransformation {
+            guard let adapted = try await GeneratedLanguageCheck.validated(generate: { issue in
+                try await runtime.transformText(
+                    to: MessageGenerationPrompt.regionalFormPrompt(text: translatedText, originalSource: sourceText,
+                        languageMode: languageMode, issue: issue),
+                    languages: [languageMode.target], instructions: MessageGenerationPrompt.regionalFormInstructions, greedy: true
+                )
+            }, validate: {
+                GeneratedLanguageCheck.issue(in: $0, expected: languageMode.target, field: "regionalExpression", userInput: userInput)
+            }) else { throw FoundationModelsServiceError.languageMismatch(languageMode.target) }
+            translatedText = adapted
+        }
+        let targetText = MessagePunctuation.clean(languageMode.target.normalizedWriting(translatedText))
         try Task.checkCancellation()
         let translation = GeneratedTranslation(sourceText: sourceText, targetText: targetText, examples: nil)
 
@@ -86,7 +99,7 @@ struct FoundationModelsMessageService: MessageService {
         for text: String,
         languageMode: LanguageMode
     ) async -> [JapanesePronunciationUnit]? {
-        guard languageMode.target.id == LanguageCatalog.japaneseJapan.id else { return nil }
+        guard languageMode.target.languageIdentity == "ja" else { return nil }
         return await pronunciationService.pronunciation(for: text)
     }
 

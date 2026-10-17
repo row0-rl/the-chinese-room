@@ -66,7 +66,8 @@ struct GeneratedLanguageRegression {
         let missingGloss = GeneratedAlignment(literalChunks: [GeneratedLiteralChunk(targetText: "배고파요.", literalText: "")])
         precondition(GeneratedMessageValidation.alignmentValidationError(missingGloss, targetText: "배고파요.", languageMode: mode, userInput: nil) != nil)
         let starter = MockMessageService.openingMessage(for: mode)
-        precondition(starter.normalizedSourceText == "我饿了。" && starter.targetText == "배고파요.")
+        precondition(starter.sourceText == "我饿了。")
+        precondition(starter.normalizedSourceText == "我饿了" && starter.targetText == "배고파요")
         precondition(starter.literalChunks.isEmpty)
         let exactTarget = "제가 도움이 필요합니다."
         func alignment(_ parts: [String]) -> GeneratedAlignment {

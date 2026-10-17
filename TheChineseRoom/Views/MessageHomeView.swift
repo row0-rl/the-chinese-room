@@ -109,7 +109,7 @@ struct MessageHomeView: View {
     }
 
     private func cardViewportHeight(in availableHeight: CGFloat) -> CGFloat {
-        let inputReserve: CGFloat = showsKeyboardInput ? 118 : 96
+        let inputReserve: CGFloat = showsKeyboardInput ? 118 : 112
         let previewReserve: CGFloat = 0
         let errorReserve: CGFloat = store.generationError == nil ? 0 : 92
         let reservedHeight = inputReserve + previewReserve + errorReserve + 8
@@ -129,7 +129,12 @@ struct MessageHomeView: View {
                     let restingOffset = cardPlacementOffset(card.position, viewportHeight: viewportHeight)
                     let destinationOffset = cardPlacementOffset(card.position, centeredAt: destination, viewportHeight: viewportHeight)
                     let offset = restingOffset + (destinationOffset - restingOffset) * progress
-                    MessagePaper(seed: card.id, maximumHeight: maximumCardHeight(in: viewportHeight), resetScroll: card.position != 0) {
+                    MessagePaper(seed: card.id, maximumHeight: maximumCardHeight(in: viewportHeight), resetScroll: card.position != 0,
+                                 isSaved: card.message?.isSaved ?? false,
+                                 appStrings: appStrings,
+                                 onToggleSaved: card.message != nil ? {
+                                     if let message = card.message { store.toggleSaved(for: message.id) }
+                                 } : nil) {
                         Group {
                             if let message = card.message {
                                 messageCard(
@@ -166,12 +171,12 @@ struct MessageHomeView: View {
             .simultaneousGesture(
                 DragGesture(minimumDistance: 12)
                     .updating($isDraggingCard) { value, dragging, _ in
-                        if store.pendingDictationText == nil && !isPaging && !scrollsInsideCard(value.startLocation, viewportHeight: viewportHeight) {
+                        if store.pendingDictationText == nil && !isPaging && !scrollsInsideCard(value.startLocation, viewportHeight: viewportHeight) && !startsOnSaveCorner(value.startLocation, viewportSize: proxy.size) {
                             dragging = true
                         }
                     }
                     .onChanged { value in
-                        guard store.pendingDictationText == nil, !isPaging, !scrollsInsideCard(value.startLocation, viewportHeight: viewportHeight) else { return }
+                        guard store.pendingDictationText == nil, !isPaging, !scrollsInsideCard(value.startLocation, viewportHeight: viewportHeight) && !startsOnSaveCorner(value.startLocation, viewportSize: proxy.size) else { return }
                         let translation = value.translation.height
                         // Resist dragging beyond the available history.
                         if translation > 0, store.previousCardMessage == nil {
@@ -182,7 +187,7 @@ struct MessageHomeView: View {
                         if cardDragOffset != 0 { cardDragHaptics.beginRumble() }
                     }
                     .onEnded { value in
-                        guard store.pendingDictationText == nil, !isPaging, !scrollsInsideCard(value.startLocation, viewportHeight: viewportHeight) else { return }
+                        guard store.pendingDictationText == nil, !isPaging, !scrollsInsideCard(value.startLocation, viewportHeight: viewportHeight) && !startsOnSaveCorner(value.startLocation, viewportSize: proxy.size) else { return }
                         cardDragHaptics.stopRumble()
                         Haptics.messageChanged()
                         let projectedOffset = value.predictedEndTranslation.height
@@ -205,6 +210,14 @@ struct MessageHomeView: View {
 
     private func maximumCardHeight(in viewportHeight: CGFloat) -> CGFloat {
         min(520, max(1, viewportHeight - 136))
+    }
+
+    private func startsOnSaveCorner(_ location: CGPoint, viewportSize: CGSize) -> Bool {
+        guard visibleCards.first(where: { $0.position == 0 })?.message != nil else { return false }
+        let height = cardHeight(at: 0)
+        return PaperCornerInteraction.startsInCorner(location, paperFrame: CGRect(
+            x: 0, y: (viewportSize.height - height) / 2, width: viewportSize.width, height: height
+        ))
     }
 
     private func scrollsInsideCard(_ location: CGPoint, viewportHeight: CGFloat) -> Bool {
@@ -389,11 +402,22 @@ struct MessageHomeView: View {
                 .onTapGesture {
                     dismissKeyboardMode()
                 }
+                .simultaneousGesture(keyboardDismissGesture)
 
             Color.clear
                 .frame(height: 84)
                 .allowsHitTesting(false)
         }
+    }
+
+    private var keyboardDismissGesture: some Gesture {
+        DragGesture(minimumDistance: 20)
+            .onEnded { value in
+                guard showsKeyboardInput,
+                      value.translation.height > 40,
+                      value.translation.height > abs(value.translation.width) else { return }
+                dismissKeyboardMode()
+            }
     }
 
     private var typedInputBar: some View {
@@ -419,6 +443,7 @@ struct MessageHomeView: View {
             .opacity(inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.35 : 1)
             .accessibilityLabel(appStrings.sendLabel)
         }
+        .simultaneousGesture(keyboardDismissGesture)
     }
 
     private var inputBar: some View {
@@ -448,7 +473,7 @@ struct MessageHomeView: View {
                 }
             )
             .frame(maxWidth: 260)
-            .frame(height: 48)
+            .frame(height: 64)
 
             Button {
                 showsKeyboardInput.toggle()
@@ -465,7 +490,7 @@ struct MessageHomeView: View {
 
             Spacer(minLength: 0)
         }
-        .frame(height: 48)
+        .frame(height: 64)
     }
 
     private func cancelHeldDictation() {
@@ -877,7 +902,7 @@ private final class DictationPressControl: UIControl {
     }
 
     override var intrinsicContentSize: CGSize {
-        CGSize(width: ceil(titleLabel.intrinsicContentSize.width) + 68, height: 48)
+        CGSize(width: ceil(titleLabel.intrinsicContentSize.width) + 68, height: 64)
     }
 
     override func layoutSubviews() {

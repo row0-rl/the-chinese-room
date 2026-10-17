@@ -11,6 +11,7 @@ struct LearningMessage: Identifiable, Equatable {
     var japanesePronunciation: [JapanesePronunciationUnit]?
     var ipaPronunciation: [IPAPronunciationUnit]?
     var hanjaAnnotations: [HanjaAnnotation]?
+    var isSaved: Bool
     var audioState: MessageAudioState
 
     init(
@@ -24,6 +25,7 @@ struct LearningMessage: Identifiable, Equatable {
         japanesePronunciation: [JapanesePronunciationUnit]? = nil,
         ipaPronunciation: [IPAPronunciationUnit]? = nil,
         hanjaAnnotations: [HanjaAnnotation]? = nil,
+        isSaved: Bool = false,
         audioState: MessageAudioState = .notLoaded
     ) {
         self.id = id
@@ -51,6 +53,7 @@ struct LearningMessage: Identifiable, Equatable {
         self.japanesePronunciation = cleanedTarget == targetText ? japanesePronunciation : nil
         self.ipaPronunciation = cleanedTarget == targetText ? ipaPronunciation : nil
         self.hanjaAnnotations = hanjaAnnotations
+        self.isSaved = isSaved
         self.audioState = audioState
     }
 }
@@ -132,10 +135,10 @@ enum PronunciationNotationSystem: String, Codable, CaseIterable {
     case hepburnRomanization
 
     static func fixedSystem(for language: LanguageProfile) -> Self {
-        switch language.id {
-        case LanguageCatalog.simplifiedChinese.id: .pinyin
-        case LanguageCatalog.koreanHangul.id: .revisedRomanization
-        case LanguageCatalog.japaneseJapan.id: .hepburnRomanization
+        switch language.languageIdentity {
+        case "zh": .pinyin
+        case "ko": .revisedRomanization
+        case "ja": .hepburnRomanization
         default: .ipa
         }
     }
@@ -187,7 +190,7 @@ enum LanguageCatalog {
         id: "simplified_chinese",
         displayName: "Chinese",
         nativeName: "简体中文",
-        promptName: "Simplified Chinese",
+        promptName: "Mandarin as used in mainland China, written in Simplified Chinese",
         localeIdentifier: "zh-Hans-CN"
     )
 
@@ -195,7 +198,7 @@ enum LanguageCatalog {
         id: "korean_hangul",
         displayName: "Korean",
         nativeName: "한국어",
-        promptName: "Korean Hangul",
+        promptName: "Standard South Korean, written in Hangul",
         localeIdentifier: "ko-KR"
     )
 
@@ -227,7 +230,7 @@ enum LanguageCatalog {
         id: "japanese_japan",
         displayName: "Japanese",
         nativeName: "日本語",
-        promptName: "Japanese as used in Japan",
+        promptName: "Standard Japanese as used in Japan",
         localeIdentifier: "ja-JP"
     )
 
@@ -243,7 +246,7 @@ enum LanguageCatalog {
         id: "hindi_india",
         displayName: "Hindi",
         nativeName: "हिन्दी",
-        promptName: "Hindi as used in India",
+        promptName: "Standard Hindi as used in India, written in Devanagari",
         localeIdentifier: "hi-IN"
     )
 
@@ -270,7 +273,7 @@ enum LanguageCatalog {
     ]
 
     static func language(id: String) -> LanguageProfile? {
-        supportedLanguages.first { $0.id == id }
+        allProfiles.first { $0.id == id }
     }
 
     static func mode(id: String) -> LanguageMode? {
@@ -278,7 +281,7 @@ enum LanguageCatalog {
         guard parts.count == 2,
               let source = language(id: parts[0]),
               let target = language(id: parts[1]),
-              source.id != target.id
+              source.languageIdentity != target.languageIdentity
         else {
             return nil
         }
@@ -289,34 +292,36 @@ enum LanguageCatalog {
     static func speechPreview(for language: LanguageProfile) -> String {
         let examples: [String]
 
-        switch language.id {
-        case englishUS.id:
+        switch language.languageIdentity {
+        case "en":
             examples = ["What a beautiful day.", "Let’s learn something new.", "It’s nice to meet you."]
-        case frenchFrance.id:
+        case "fr":
             examples = ["Quelle belle journée.", "Apprenons quelque chose de nouveau.", "Ravi de vous rencontrer."]
-        case simplifiedChinese.id:
+        case "yue":
+            examples = ["今日天氣真係好。", "我哋一齊學新嘢啦。", "好高興識到你。"]
+        case "zh":
             examples = ["今天天气真好。", "我们来学点新东西吧。", "很高兴认识你。"]
-        case koreanHangul.id:
+        case "ko":
             examples = ["오늘 정말 좋은 날이에요.", "새로운 것을 배워 봅시다.", "만나서 반가워요."]
-        case spanishSpain.id:
+        case "es":
             examples = ["Qué día tan bonito.", "Aprendamos algo nuevo.", "Encantado de conocerte."]
-        case portugueseBrazil.id:
+        case "pt":
             examples = ["Que dia lindo.", "Vamos aprender algo novo.", "Prazer em conhecer você."]
-        case italianItaly.id:
+        case "it":
             examples = ["Che bella giornata.", "Impariamo qualcosa di nuovo.", "Piacere di conoscerti."]
-        case japaneseJapan.id:
+        case "ja":
             examples = ["今日はいい天気ですね。", "新しいことを学びましょう。", "お会いできてうれしいです。"]
-        case russianRussia.id:
+        case "ru":
             examples = ["Какой прекрасный день.", "Давайте узнаем что-нибудь новое.", "Приятно познакомиться."]
-        case hindiIndia.id:
+        case "hi":
             examples = ["आज का दिन बहुत सुंदर है।", "आइए कुछ नया सीखें।", "आपसे मिलकर खुशी हुई।"]
-        case swedishSweden.id:
+        case "sv":
             examples = ["Vilken vacker dag.", "Låt oss lära oss något nytt.", "Trevligt att träffas."]
         default:
             examples = [language.nativeName]
         }
 
-        return examples.randomElement() ?? language.nativeName
+        return language.normalizedWriting(examples.randomElement() ?? language.nativeName)
     }
 }
 
@@ -361,9 +366,9 @@ struct AppLocale: Equatable {
     static let english = AppLocale(id: "en")
 
     static func forLanguage(_ language: LanguageProfile) -> AppLocale {
-        switch language.localeIdentifier.split(separator: "-").first {
+        switch language.languageIdentity {
         case "fr": return AppLocale(id: "fr")
-        case "zh": return AppLocale(id: "zh-Hans")
+        case "zh", "yue": return AppLocale(id: language.usesTraditionalChinese ? "zh-Hant" : "zh-Hans")
         case "ko": return AppLocale(id: "ko")
         default: return .english
         }
@@ -383,6 +388,12 @@ struct AppStrings: Equatable {
         return sourceBundle.localizedString(forKey: key, value: fallback, table: "Interface")
     }
 
+    var saveExpression: String { text("saveExpression") }
+    var unsaveExpression: String { text("unsaveExpression") }
+    var expressionSaved: String { text("expressionSaved") }
+    var expressionUnsaved: String { text("expressionUnsaved") }
+    var foldCornerHint: String { text("foldCornerHint") }
+    var unfoldCornerHint: String { text("unfoldCornerHint") }
     var literalUnavailable: String { text("literalUnavailable") }
     var generationLanguageFailure: String { text("generationLanguageFailure") }
     var examplesTitle: String { text("examplesTitle") }
@@ -409,6 +420,8 @@ struct AppStrings: Equatable {
     var roomNameTitle: String { text("roomNameTitle") }
     var roomNameFooter: String { text("roomNameFooter") }
     var originalLanguageTitle: String { text("originalLanguageTitle") }
+    var originFormTitle: String { text("originFormTitle") }
+    var originFormFooter: String { text("originFormFooter") }
     var targetLanguageTitle: String { text("targetLanguageTitle") }
     var doneButtonTitle: String { text("doneButtonTitle") }
     var cancelButtonTitle: String { text("cancelButtonTitle") }
@@ -473,6 +486,34 @@ struct AppStrings: Equatable {
         let code = Locale.Language(identifier: language.localeIdentifier).languageCode?.identifier ?? language.id
         return Locale(identifier: localeIdentifier).localizedString(forLanguageCode: code) ?? language.displayName
     }
+
+    func languageGroupName(_ language: LearningLanguage) -> String {
+        Locale(identifier: localeIdentifier).localizedString(forLanguageCode: language.rawValue)
+            ?? language.defaultProfile.displayName
+    }
+
+    func originFormName(_ language: LanguageProfile) -> String {
+        let locale = Locale(identifier: language.localeIdentifier)
+        let region = locale.region.map { Locale(identifier: localeIdentifier).localizedString(forRegionCode: $0.identifier) ?? $0.identifier } ?? ""
+        switch language.id {
+        case "japanese_japan", "hindi_india": return "\(region) · \(text("formStandard"))"
+        case "japanese_kansai": return text("formKansai")
+        case "hindi_mumbai": return text("formMumbai")
+        case "french_canada": return "\(region) · \(text("formQuebec"))"
+        default: break
+        }
+        if language.learningLanguage == .chinese {
+            let spoken = text(language.languageIdentity == "yue" ? "formCantonese" : "formMandarin")
+            let script = text(language.usesTraditionalChinese ? "formTraditional" : "formSimplified")
+            return "\(spoken) · \(region) · \(script)"
+        }
+        return region
+    }
+
+    func roomProfileLabel(_ language: LanguageProfile) -> String {
+        if language.learningLanguage == .chinese { return originFormName(language) }
+        return "\(roomLanguageName(language)) · \(originFormName(language))"
+    }
 }
 
 /// UTF-16 offsets refer to the exact target sentence, including repeated words.
@@ -483,8 +524,7 @@ struct HanjaAnnotation: Codable, Equatable, Identifiable {
     var id: Int { offset }
 
     static func supports(_ mode: LanguageMode) -> Bool {
-        mode.source.id == LanguageCatalog.simplifiedChinese.id &&
-        mode.target.id == LanguageCatalog.koreanHangul.id
+        mode.source.learningLanguage == .chinese && mode.target.languageIdentity == "ko"
     }
 
     /// A mixed Hangul/Hanja sentence has an exact one-character correspondence.

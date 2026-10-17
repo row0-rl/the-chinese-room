@@ -43,6 +43,8 @@ private struct PersistedMessage: Codable {
     let japanesePronunciation: [PersistedJapanesePronunciationUnit]?
     let ipaPronunciation: [IPAPronunciationUnit]?
     let hanjaAnnotations: [HanjaAnnotation]?
+    // Optional so histories written before corner saving still decode.
+    let isSaved: Bool?
 
     init(_ message: LearningMessage) {
         self.id = message.id
@@ -55,6 +57,7 @@ private struct PersistedMessage: Codable {
         self.japanesePronunciation = message.japanesePronunciation?.map(PersistedJapanesePronunciationUnit.init)
         self.ipaPronunciation = message.ipaPronunciation
         self.hanjaAnnotations = message.hanjaAnnotations
+        self.isSaved = message.isSaved
     }
 
     var learningMessage: LearningMessage {
@@ -69,6 +72,7 @@ private struct PersistedMessage: Codable {
             japanesePronunciation: japanesePronunciation?.map(\.pronunciationUnit),
             ipaPronunciation: ipaPronunciation,
             hanjaAnnotations: hanjaAnnotations,
+            isSaved: isSaved ?? false,
             audioState: .notLoaded
         )
     }

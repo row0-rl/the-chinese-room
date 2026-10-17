@@ -13,6 +13,8 @@
         F92000000000000000000002 = {isa = XCSwiftPackageProductDependency; package = F92000000000000000000003; productName = FluidAudio; };
 /* End XCSwiftPackageProductDependency section */
 /* Begin PBXBuildFile section */
+		F10000000000000000000001 /* PaperCornerInteraction.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000002 /* PaperCornerInteraction.swift */; };
+        F99000000000000000000001 /* LanguageVariations.swift in Sources */ = {isa = PBXBuildFile; fileRef = F99000000000000000000002 /* LanguageVariations.swift */; };
         F98000000000000000000005 /* RoomViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = F98000000000000000000006 /* RoomViews.swift */; };
         F98000000000000000000003 /* RoomStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F98000000000000000000004 /* RoomStore.swift */; };
         F98000000000000000000001 /* RoomRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = F98000000000000000000002 /* RoomRecord.swift */; };
@@ -62,6 +64,8 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		F10000000000000000000002 /* PaperCornerInteraction.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaperCornerInteraction.swift; sourceTree = "<group>"; };
+        F99000000000000000000002 /* LanguageVariations.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LanguageVariations.swift; sourceTree = "<group>"; };
         F98000000000000000000006 /* RoomViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomViews.swift; sourceTree = "<group>"; };
         F98000000000000000000004 /* RoomStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomStore.swift; sourceTree = "<group>"; };
         F98000000000000000000002 /* RoomRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomRecord.swift; sourceTree = "<group>"; };
@@ -170,6 +174,7 @@
 		C00000000000000000000102 /* Models */ = {
 			isa = PBXGroup;
 			children = (
+                F99000000000000000000002 /* LanguageVariations.swift */,
                 F98000000000000000000002 /* RoomRecord.swift */,
 				C00000000000000000000003 /* LearningMessage.swift */,
 				C00000000000000000000015 /* MessageSessionRecord.swift */,
@@ -227,6 +232,7 @@
 			children = (
 				C0000000000000000000000D /* Environment.swift */,
 				C00000000000000000000013 /* Haptics.swift */,
+				F10000000000000000000002 /* PaperCornerInteraction.swift */,
 			);
 			path = Support;
 			sourceTree = "<group>";
@@ -315,6 +321,7 @@
 				en,
 				fr,
 				"zh-Hans",
+				"zh-Hant",
 				ko,
 				Base,
 			);
@@ -354,6 +361,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+                F99000000000000000000001 /* LanguageVariations.swift in Sources */,
                 F98000000000000000000005 /* RoomViews.swift in Sources */,
                 F98000000000000000000003 /* RoomStore.swift in Sources */,
                 F98000000000000000000001 /* RoomRecord.swift in Sources */,
@@ -388,6 +396,7 @@
 				D00000000000000000000011 /* DictationService.swift in Sources */,
 				D00000000000000000000012 /* SystemDictationService.swift in Sources */,
 				D00000000000000000000013 /* Haptics.swift in Sources */,
+				F10000000000000000000001 /* PaperCornerInteraction.swift in Sources */,
 				D00000000000000000000014 /* MessageQueueActor.swift in Sources */,
 				D00000000000000000000015 /* MessageSessionRecord.swift in Sources */,
 				D00000000000000000000001 /* AppView.swift in Sources */,

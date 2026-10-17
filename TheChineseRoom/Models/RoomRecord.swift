@@ -21,7 +21,7 @@ final class RoomRecord {
 
     func pairLabel(strings: AppStrings) -> String {
         guard let mode = languageMode else { return modeID }
-        return "\(strings.roomLanguageName(mode.source)) → \(strings.roomLanguageName(mode.target))"
+        return "\(strings.roomProfileLabel(mode.source)) → \(strings.roomProfileLabel(mode.target))"
     }
 
     func title(strings: AppStrings) -> String { customName ?? pairLabel(strings: strings) }

@@ -54,6 +54,12 @@ final class MessageStore {
         messages[currentIndex]
     }
 
+    func toggleSaved(for messageID: UUID) {
+        guard let index = messages.firstIndex(where: { $0.id == messageID }) else { return }
+        messages[index].isSaved.toggle()
+        saveCurrentSession()
+    }
+
     var previousCardMessage: LearningMessage? {
         guard currentIndex > 0 else { return nil }
         return messages[currentIndex - 1]
@@ -93,7 +99,7 @@ final class MessageStore {
     }
 
     func availableVoices(for mode: LanguageMode) -> [SpeechVoice] {
-        speechService.availableVoices(localeIdentifier: mode.target.localeIdentifier)
+        speechService.availableVoices(localeIdentifier: mode.target.speechLocaleIdentifier)
     }
 
     func selectedVoiceIdentifier(for mode: LanguageMode) -> String? {
@@ -188,7 +194,7 @@ final class MessageStore {
     func previewVoice(_ voiceIdentifier: String?, for mode: LanguageMode) async throws {
         try await speechService.speak(
             LanguageCatalog.speechPreview(for: mode.target),
-            localeIdentifier: mode.target.localeIdentifier,
+            localeIdentifier: mode.target.speechLocaleIdentifier,
             voiceIdentifier: voiceIdentifier
         )
     }
@@ -326,7 +332,7 @@ final class MessageStore {
     }
 
     func updateLanguageMode(_ newLanguageMode: LanguageMode) {
-        guard newLanguageMode.source.id != newLanguageMode.target.id else { return }
+        guard newLanguageMode.hasDistinctLanguages else { return }
         generationError = nil
         let wasInactive = !isRoomActive
         isRoomActive = true
@@ -339,7 +345,7 @@ final class MessageStore {
         cancelDictation()
         saveCurrentSession()
         currentLanguageMode = newLanguageMode
-        dictationService.prepare(localeIdentifier: newLanguageMode.source.localeIdentifier)
+        dictationService.prepare(localeIdentifier: newLanguageMode.source.dictationLocaleIdentifier)
         LanguageModeStorage.save(newLanguageMode)
         loadCurrentSession()
         dictatedText = ""
@@ -441,7 +447,7 @@ final class MessageStore {
         speechService.stop()
         isSpeaking = false
         do {
-            try await dictationService.startRecording(localeIdentifier: currentLanguageMode.source.localeIdentifier)
+            try await dictationService.startRecording(localeIdentifier: currentLanguageMode.source.dictationLocaleIdentifier)
             guard dictationRequestID == id else { return }
             try Task.checkCancellation()
             isStartingDictation = false
@@ -519,7 +525,7 @@ final class MessageStore {
         do {
             try await speechService.speak(
                 currentMessage.targetText,
-                localeIdentifier: currentLanguageMode.target.localeIdentifier,
+                localeIdentifier: currentLanguageMode.target.speechLocaleIdentifier,
                 voiceIdentifier: selectedVoiceIdentifier(for: currentLanguageMode)
             )
             guard speechRequestID == requestID, currentMessage.id == messageID else { return }
@@ -754,7 +760,7 @@ final class MessageStore {
     }
 
     private func bindDictationUpdates() {
-        dictationService.prepare(localeIdentifier: currentLanguageMode.source.localeIdentifier)
+        dictationService.prepare(localeIdentifier: currentLanguageMode.source.dictationLocaleIdentifier)
         dictationService.onTranscriptChange = { [weak self] transcript in
             guard let self, self.isStartingDictation || self.isDictating || self.isTranscribing,
                   self.pendingDictationText != nil else { return }

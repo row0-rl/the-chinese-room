@@ -74,6 +74,16 @@ struct AppView: View {
         }
         store.updateLanguageMode(mode)
         store.attachPersistence(modelContext)
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("--rooms-preview") {
+            let arguments = ProcessInfo.processInfo.arguments
+            if arguments.contains("--saved-message-preview"), !store.currentMessage.isSaved {
+                store.toggleSaved(for: store.currentMessage.id)
+            } else if arguments.contains("--unsaved-message-preview"), store.currentMessage.isSaved {
+                store.toggleSaved(for: store.currentMessage.id)
+            }
+        }
+        #endif
     }
 }
 
@@ -105,8 +115,8 @@ private struct AppleTranslationHost: View {
                     Color.clear
                         .frame(width: 0, height: 0)
                         .translationTask(
-                            source: Locale.Language(identifier: request.languageMode.source.localeIdentifier),
-                            target: Locale.Language(identifier: request.languageMode.target.localeIdentifier)
+                            source: Locale.Language(identifier: request.languageMode.source.translationLocaleIdentifier),
+                            target: Locale.Language(identifier: request.languageMode.target.translationLocaleIdentifier)
                         ) { session in
                             await translator.perform(request, using: session)
                         }

@@ -5,7 +5,8 @@ TEST_DIR="$(mktemp -d "${TMPDIR:-/tmp}/room-lifecycle.XXXXXX")"
 trap 'rm -rf "$TEST_DIR"' EXIT
 cd "$ROOT_DIR"
 xcrun swiftc -target "$(uname -m)-apple-macos26.0" \
-  TheChineseRoom/Models/{LearningMessage,MessageSessionRecord}.swift \
+  tests/Support/AppAppearanceStub.swift \
+  TheChineseRoom/Models/{LearningMessage,MessageSessionRecord,LanguageVariations}.swift \
   TheChineseRoom/App/AppConfiguration.swift \
   TheChineseRoom/Services/Messages/{MessageService,MockMessageService,AppleTranslationService}.swift \
   TheChineseRoom/Services/Speech/SpeechService.swift \

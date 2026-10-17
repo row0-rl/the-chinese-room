@@ -18,7 +18,7 @@ actor AppleMessageRuntime {
         case .unavailable:
             return "Apple Intelligence is currently unavailable."
         }
-        for language in languages where !model.supportsLocale(Locale(identifier: language.localeIdentifier)) {
+        for language in languages where !model.supportsLocale(Locale(identifier: language.modelLocaleIdentifier)) {
             return "Apple Intelligence does not support \(language.promptName) on this device."
         }
         return nil

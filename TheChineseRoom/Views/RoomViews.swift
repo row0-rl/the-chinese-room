@@ -6,14 +6,13 @@ struct RoomLabel: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text(room.title(strings: strings)).appFont(.body)
+            Text(room.title(strings: strings)).appFont(.body).lineLimit(room.customName == nil ? 3 : 2)
             if room.customName != nil {
-                Text(room.pairLabel(strings: strings)).appFont(.caption).opacity(0.7)
+                Text(room.pairLabel(strings: strings)).appFont(.caption).opacity(0.7).lineLimit(3)
             }
         }
-        .lineLimit(1)
-        .frame(maxWidth: 240, alignment: .leading)
-        .fixedSize(horizontal: true, vertical: false)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .fixedSize(horizontal: false, vertical: true)
         .accessibilityElement(children: .combine)
     }
 }
@@ -45,14 +44,9 @@ struct RoomCreationView: View {
     init(rooms: RoomStore, initialMode: LanguageMode, isFirstRoom: Bool = false) {
         self.rooms = rooms
         self.isFirstRoom = isFirstRoom
-        _source = State(initialValue: initialMode.source)
-        // Start with an uncreated pair when opening Add, retaining the language you learn through.
-        let nextTarget = LanguageCatalog.supportedLanguages.first { language in
-            language.id != initialMode.source.id && !rooms.rooms.contains(where: { $0.modeID == LanguageMode(source: initialMode.source, target: language).id })
-        }
-        let fallbackTarget = initialMode.target.id != initialMode.source.id ? initialMode.target
-            : LanguageCatalog.supportedLanguages.first { $0.id != initialMode.source.id }!
-        _target = State(initialValue: isFirstRoom ? fallbackTarget : (nextTarget ?? fallbackTarget))
+        let defaults = initialMode.defaultForms
+        _source = State(initialValue: defaults.source)
+        _target = State(initialValue: defaults.target)
     }
 
     var body: some View {
@@ -64,9 +58,16 @@ struct RoomCreationView: View {
                 .listRowBackground(Color.chineseRoomCard)
                 Section {
                     languagePicker(strings.roomTargetTitle, selection: $target, excluding: source)
-                    languagePicker(strings.roomSourceTitle, selection: $source, excluding: target)
+                    formPicker(selection: $target, excluding: source)
                 } footer: {
-                    if source.id == target.id {
+                    Text(strings.originFormFooter).appFont(.footnote)
+                }
+                .listRowBackground(Color.chineseRoomCard)
+                Section {
+                    languagePicker(strings.roomSourceTitle, selection: $source, excluding: target)
+                    formPicker(selection: $source, excluding: target)
+                } footer: {
+                    if !mode.hasDistinctLanguages {
                         Text(strings.roomDifferentLanguages).appFont(.footnote)
                     } else if existingRoom != nil {
                         Text(strings.roomAlreadyExists).appFont(.footnote)
@@ -79,7 +80,7 @@ struct RoomCreationView: View {
                         if !isFirstRoom { dismiss() }
                     }
                     .appFont(.headline)
-                    .disabled(source.id == target.id)
+                    .disabled(!mode.hasDistinctLanguages)
                     .accessibilityIdentifier("create-room")
                 }
                 .listRowBackground(Color.chineseRoomCard)
@@ -127,14 +128,33 @@ struct RoomCreationView: View {
     }
 
     private func languagePicker(_ title: String, selection: Binding<LanguageProfile>, excluding other: LanguageProfile) -> some View {
-        Picker(title, selection: selection) {
-            ForEach(LanguageCatalog.supportedLanguages.filter { $0.id != other.id }) { language in
-                let name = strings.roomLanguageName(language)
-                Text(name == language.nativeName ? name : "\(name) · \(language.nativeName)")
+        let selectedLanguage = Binding<LearningLanguage>(
+            get: { selection.wrappedValue.learningLanguage },
+            set: { language in
+                guard language != selection.wrappedValue.learningLanguage,
+                      let form = language.defaultForm(excluding: other) else { return }
+                selection.wrappedValue = form
+            }
+        )
+        return Picker(title, selection: selectedLanguage) {
+            ForEach(LearningLanguage.allCases.filter { !$0.forms(excluding: other).isEmpty }) { language in
+                let name = strings.languageGroupName(language)
+                let nativeName = language == .chinese ? "中文" : language.defaultProfile.nativeName
+                Text(name == nativeName ? name : "\(name) · \(nativeName)")
                     .appFont(.body).tag(language)
             }
         }
         .appFont(.body)
+    }
+
+    private func formPicker(selection: Binding<LanguageProfile>, excluding other: LanguageProfile) -> some View {
+        Picker(strings.originFormTitle, selection: selection) {
+            ForEach(selection.wrappedValue.learningLanguage.forms(excluding: other)) { form in
+                Text(strings.originFormName(form)).appFont(.body).tag(form)
+            }
+        }
+        .appFont(.body)
+        .accessibilityIdentifier(selection.wrappedValue.id == target.id ? "target-origin-form" : "source-origin-form")
     }
 }
 

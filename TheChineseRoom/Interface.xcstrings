@@ -27,6 +27,12 @@
             "state": "translated",
             "value": "마이크 시작 중…"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在啓動麥克風…"
+          }
         }
       }
     },
@@ -55,6 +61,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "한자를 불러올 수 없습니다. 주석을 닫았다가 다시 열어 주세요."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "漢字標注暫不可用。收起後重新展開即可重試。"
           }
         }
       }
@@ -85,6 +97,12 @@
             "state": "translated",
             "value": "예문"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "例句"
+          }
         }
       }
     },
@@ -113,6 +131,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "언어"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "語言"
           }
         }
       }
@@ -143,6 +167,12 @@
             "state": "translated",
             "value": "원문 언어"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "原語言"
+          }
         }
       }
     },
@@ -171,6 +201,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "학습할 언어"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "目標語言"
           }
         }
       }
@@ -201,6 +237,12 @@
             "state": "translated",
             "value": "완료"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "完成"
+          }
         }
       }
     },
@@ -229,6 +271,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "취소"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "取消"
           }
         }
       }
@@ -259,6 +307,12 @@
             "state": "translated",
             "value": "언어 선택"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選擇語言"
+          }
         }
       }
     },
@@ -287,6 +341,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "알고 있는 언어와 배우고 싶은 언어를 선택하세요."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選擇你熟悉的語言和想學習的語言。"
           }
         }
       }
@@ -317,6 +377,12 @@
             "state": "translated",
             "value": "계속"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "繼續"
+          }
         }
       }
     },
@@ -345,6 +411,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "메시지 불러오는 중…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在加載消息…"
           }
         }
       }
@@ -375,6 +447,12 @@
             "state": "translated",
             "value": "설정"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "設置"
+          }
         }
       }
     },
@@ -403,6 +481,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "로컬"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "本地"
           }
         }
       }
@@ -433,6 +517,12 @@
             "state": "translated",
             "value": "로컬 예시 메시지 사용 중"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在使用本地示例消息"
+          }
         }
       }
     },
@@ -461,6 +551,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "듣는 중…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在聆聽…"
           }
         }
       }
@@ -491,6 +587,12 @@
             "state": "translated",
             "value": "표현을 입력하세요"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "輸入一個表達"
+          }
         }
       }
     },
@@ -519,6 +621,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "표현 보내기"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "發送表達"
           }
         }
       }
@@ -549,6 +657,12 @@
             "state": "translated",
             "value": "길게 눌러 말하기"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "按住說話"
+          }
         }
       }
     },
@@ -577,6 +691,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "키보드로 입력"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "使用鍵盤輸入"
           }
         }
       }
@@ -607,6 +727,12 @@
             "state": "translated",
             "value": "발음 듣기"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "播放發音"
+          }
         }
       }
     },
@@ -635,6 +761,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "직역 숨기기"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "隱藏直譯"
           }
         }
       }
@@ -665,6 +797,12 @@
             "state": "translated",
             "value": "직역 보기"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "顯示直譯"
+          }
         }
       }
     },
@@ -693,6 +831,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "학습 모드"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "學習模式"
           }
         }
       }
@@ -723,6 +867,12 @@
             "state": "translated",
             "value": "읽기 음성"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "朗讀聲音"
+          }
         }
       }
     },
@@ -751,6 +901,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Supertonic은 처음 사용할 때 다운로드됩니다. 중국어는 iOS에 설치된 음성을 사용합니다."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Supertonic 會在首次使用時下載。普通話使用 iOS 中已安裝的語音。"
           }
         }
       }
@@ -781,6 +937,12 @@
             "state": "translated",
             "value": "이 메시지의 직역을 제공할 수 없습니다."
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此消息暫時無法提供直譯。"
+          }
         }
       }
     },
@@ -809,6 +971,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "생성된 메시지가 선택한 언어와 일치하지 않습니다. 다시 시도해 주세요."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "生成的消息不符合所選語言，請重試。"
           }
         }
       }
@@ -839,6 +1007,12 @@
             "state": "translated",
             "value": "밀어서 다음 메시지 보기"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "滑動以生成下一條消息"
+          }
         }
       }
     },
@@ -867,6 +1041,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "메시지 생성이 중단되었습니다. 밀어서 다시 시도하세요."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "消息生成已中斷，請滑動重試。"
           }
         }
       }
@@ -897,6 +1077,12 @@
             "state": "translated",
             "value": "자동 음성 선택"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自動選擇語音"
+          }
         }
       }
     },
@@ -925,6 +1111,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "발음 표시"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "顯示發音標注"
           }
         }
       }
@@ -955,6 +1147,12 @@
             "state": "translated",
             "value": "발음 숨기기"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "隱藏發音標注"
+          }
         }
       }
     },
@@ -983,6 +1181,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "발음"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "發音"
           }
         }
       }
@@ -1013,6 +1217,12 @@
             "state": "translated",
             "value": "표기 체계"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "標注系統"
+          }
         }
       }
     },
@@ -1041,6 +1251,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "발음 자리 표시자"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "發音佔位符"
           }
         }
       }
@@ -1071,6 +1287,12 @@
             "state": "translated",
             "value": "발음 표기는 이 기기에서 생성되며 부정확할 수 있습니다."
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "發音標注在此設備上生成，可能存在錯誤。"
+          }
         }
       }
     },
@@ -1099,6 +1321,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "국제 음성 기호 (IPA)"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "國際音標（IPA）"
           }
         }
       }
@@ -1129,6 +1357,12 @@
             "state": "translated",
             "value": "한어병음 · 성조 부호"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "漢語拼音（聲調符號）"
+          }
         }
       }
     },
@@ -1157,6 +1391,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "국어의 로마자 표기법"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "韓國語羅馬字標記法"
           }
         }
       }
@@ -1187,6 +1427,12 @@
             "state": "translated",
             "value": "헵번식 로마자 표기법"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "赫本式羅馬字"
+          }
         }
       }
     },
@@ -1215,6 +1461,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "발음을 제공할 수 없습니다"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暫無發音標注"
           }
         }
       }
@@ -1245,6 +1497,12 @@
             "state": "translated",
             "value": "Apple이 이 기기에서 병음으로 변환합니다. 여러 발음이 있는 한자는 잘못 표기될 수 있습니다."
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "拼音由 Apple 在本機轉換，多音字可能標注不準確。"
+          }
         }
       }
     },
@@ -1273,6 +1531,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "이 언어의 온디바이스 음성은 지원되지 않습니다."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暫不支持此語言的設備端語音。"
           }
         }
       }
@@ -1303,6 +1567,12 @@
             "state": "translated",
             "value": "화면 모드"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "外觀"
+          }
         }
       }
     },
@@ -1331,6 +1601,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "시스템 설정"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "跟隨系統"
           }
         }
       }
@@ -1361,6 +1637,12 @@
             "state": "translated",
             "value": "라이트"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "淺色"
+          }
         }
       }
     },
@@ -1389,6 +1671,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "다크"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "深色"
           }
         }
       }
@@ -1419,6 +1707,12 @@
             "state": "translated",
             "value": "방"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "房間"
+          }
         }
       }
     },
@@ -1447,6 +1741,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "현재 방"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "當前房間"
           }
         }
       }
@@ -1477,6 +1777,12 @@
             "state": "translated",
             "value": "방 추가"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "添加房間"
+          }
         }
       }
     },
@@ -1505,6 +1811,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "첫 번째 방 만들기"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "創建你的第一個房間"
           }
         }
       }
@@ -1535,6 +1847,12 @@
             "state": "translated",
             "value": "한 언어로 다른 언어를 배워 보세요. 각 방은 메시지와 마지막으로 본 위치를 저장합니다."
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "用一種語言學習另一種語言。每個房間會保存各自的消息和你上次看到的位置。"
+          }
         }
       }
     },
@@ -1563,6 +1881,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "배우고 싶은 언어"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "我想學習"
           }
         }
       }
@@ -1593,6 +1917,12 @@
             "state": "translated",
             "value": "학습에 사용할 언어"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "使用"
+          }
         }
       }
     },
@@ -1621,6 +1951,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "서로 다른 두 언어를 선택하세요."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "請選擇兩種不同的語言。"
           }
         }
       }
@@ -1651,6 +1987,12 @@
             "state": "translated",
             "value": "이미 있는 방입니다. 열면 마지막으로 본 위치에서 이어갈 수 있습니다."
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你已經有這個房間了。打開即可從上次的位置繼續。"
+          }
         }
       }
     },
@@ -1679,6 +2021,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "방 만들기"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "創建房間"
           }
         }
       }
@@ -1709,6 +2057,12 @@
             "state": "translated",
             "value": "방 열기"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打開房間"
+          }
         }
       }
     },
@@ -1737,6 +2091,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "방 고정"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "置頂房間"
           }
         }
       }
@@ -1767,6 +2127,12 @@
             "state": "translated",
             "value": "방 고정 해제"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "取消置頂"
+          }
         }
       }
     },
@@ -1795,6 +2161,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "방 이름 변경"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重命名房間"
           }
         }
       }
@@ -1825,6 +2197,12 @@
             "state": "translated",
             "value": "방 보관"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "歸檔房間"
+          }
         }
       }
     },
@@ -1853,6 +2231,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "보관된 방"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已歸檔的房間"
           }
         }
       }
@@ -1883,6 +2267,12 @@
             "state": "translated",
             "value": "방을 탭하면 메시지 기록과 함께 복원됩니다."
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "輕點房間即可恢復，並保留原有消息。"
+          }
         }
       }
     },
@@ -1911,6 +2301,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "고정된 방이 먼저 표시됩니다. 다른 방은 앱을 열 때 최근 사용순으로 정렬됩니다. 길게 누르면 고정, 이름 변경, 보관할 수 있습니다."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "置頂房間排在最前。其他房間在打開應用時按最近使用排序。長按房間可置頂、重命名或歸檔。"
           }
         }
       }
@@ -1941,6 +2337,12 @@
             "state": "translated",
             "value": "방 이름"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "房間名稱"
+          }
         }
       }
     },
@@ -1970,6 +2372,12 @@
             "state": "translated",
             "value": "이름을 비워 두면 언어 쌍을 사용합니다. 언어는 항상 표시됩니다."
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "名稱留空即可使用語言對名稱。兩種語言會始終顯示。"
+          }
         }
       }
     },
@@ -1998,6 +2406,572 @@
           "stringUnit": {
             "state": "translated",
             "value": "방 선택 또는 만들기"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選擇或創建房間"
+          }
+        }
+      }
+    },
+    "formCantonese": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cantonese"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cantonais"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "광둥어"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "粤语"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "粵語"
+          }
+        }
+      }
+    },
+    "formKansai": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kansai (Osaka)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kansai (Osaka)"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "간사이 (오사카)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "关西（大阪）"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "關西（大阪）"
+          }
+        }
+      }
+    },
+    "formMandarin": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mandarin"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mandarin"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "표준 중국어"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "普通话"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "普通話"
+          }
+        }
+      }
+    },
+    "formMumbai": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mumbai (colloquial)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mumbai (familier)"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "뭄바이 (구어체)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "孟买（口语）"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "孟買（口語）"
+          }
+        }
+      }
+    },
+    "formQuebec": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Québec"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Québec"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "퀘벡"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "魁北克"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "魁北克"
+          }
+        }
+      }
+    },
+    "formSimplified": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Simplified"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Simplifié"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "간체"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "简体"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "簡體"
+          }
+        }
+      }
+    },
+    "formTraditional": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Traditional"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Traditionnel"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "번체"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "繁体"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "繁體"
+          }
+        }
+      }
+    },
+    "originFormFooter": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The origin/form sets the wording and writing style for this room."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L’origine ou la variété détermine le vocabulaire et le style d’écriture de cet espace."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "선택한 지역과 형태에 맞는 표현과 표기를 사용합니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "地区和形式决定这个房间的用词及书写方式。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "地區和形式決定這個房間的用詞及書寫方式。"
+          }
+        }
+      }
+    },
+    "originFormTitle": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Origin / form"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Origine / variété"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "지역 / 형태"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "地区／形式"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "地區／形式"
+          }
+        }
+      }
+    },
+    "formStandard": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Standard"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Standard"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "标准"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "標準"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "표준"
+          }
+        }
+      }
+    },
+    "saveExpression": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save expression"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enregistrer l’expression"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保存表达"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "표현 저장"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "儲存表達"
+          }
+        }
+      }
+    },
+    "unsaveExpression": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unsave expression"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Retirer des expressions enregistrées"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "取消保存表达"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "표현 저장 취소"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "取消儲存表達"
+          }
+        }
+      }
+    },
+    "expressionSaved": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Expression saved"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Expression enregistrée"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已保存表达"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "표현 저장됨"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已儲存表達"
+          }
+        }
+      }
+    },
+    "expressionUnsaved": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Expression unsaved"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Expression retirée"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已取消保存"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "표현 저장 취소됨"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已取消儲存"
+          }
+        }
+      }
+    },
+    "foldCornerHint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Drag the corner down-left to save"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glissez le coin vers le bas à gauche pour enregistrer"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "向左下拖动纸角以保存"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "向左下拖動紙角以儲存"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "모서리를 왼쪽 아래로 끌어 저장"
+          }
+        }
+      }
+    },
+    "unfoldCornerHint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Drag the corner up-right to unsave"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glissez le coin vers le haut à droite pour retirer"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "向右上拖动纸角以取消保存"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "向右上拖動紙角以取消儲存"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "모서리를 오른쪽 위로 끌어 저장 취소"
           }
         }
       }

@@ -5,7 +5,8 @@ TEST_DIR="$(mktemp -d "${TMPDIR:-/tmp}/room-pinyin-check.XXXXXX")"
 trap 'rm -rf "$TEST_DIR"' EXIT
 cd "$ROOT_DIR"
 xcrun swiftc \
-  TheChineseRoom/Models/LearningMessage.swift \
+  tests/Support/AppAppearanceStub.swift \
+  TheChineseRoom/Models/{LearningMessage,LanguageVariations}.swift \
   TheChineseRoom/Services/Pronunciation/JapaneseRomajiNotation.swift \
   TheChineseRoom/Services/Pronunciation/KoreanRevisedRomanization.swift \
   TheChineseRoom/Services/Pronunciation/ApplePinyinNotation.swift \

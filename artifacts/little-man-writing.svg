@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="420" height="420" viewBox="0 0 420 420">
+  <title>Little man writing</title>
+  <rect width="420" height="420" fill="white"/>
+  <g fill="none" stroke="black" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Seated body and legs, behind the tabletop. -->
+    <path d="M151 211 C140 241 150 291 159 319 Q165 337 191 339 Q217 342 225 320 C238 288 237 243 227 211"/>
+    <path d="M173 335 Q151 341 151 353 L158 380 Q159 384 167 384 M201 339 Q220 350 224 377 Q225 381 232 381"/>
+    <!-- A soft, oversized head, turned slightly to the left. -->
+    <path d="M176 87 C155 83 132 91 123 109 C117 122 120 141 119 158 C120 180 132 199 149 207 C164 215 189 215 211 213 C230 210 245 191 251 171 C258 147 246 130 230 116 C215 101 197 93 176 87 Z" fill="white"/>
+    <path d="M151 86 Q150 73 162 73 C180 71 199 80 212 89"/>
+    <path d="M143 143 l-.5 5 q-2 1 -3 0 M186 139 q0 5 -5 5"/>
+    <path d="M151 171 q6 3 11 -1"/>
+    <!-- A gently skewed desk, with no lines showing through it. -->
+    <path d="M94 260 Q190 257 289 251 L339 285 Q198 295 58 313 Z" fill="white"/>
+    <path d="M88 311 Q87 351 93 387 M327 289 Q327 336 333 382"/>
+    <!-- A single page on the desk. -->
+    <path d="M147 277 l58 -5 22 15 -62 6 Z" fill="white"/>
+    <!-- Rounded arms converge at the writing hand. -->
+    <path d="M149 215 C130 211 111 231 110 246 Q109 255 121 258 L170 272"/>
+    <path d="M228 215 Q247 210 257 224 Q266 237 254 245 L200 275"/>
+    <path d="M170 272 q8 -2 13 2 M200 275 q-6 -6 -11 -2 l-3 5"/>
+    <path d="M198 251 l-13 31"/>
+    <!-- A little writing, using the same line weight. -->
+    <path d="M175 285 q4 -3 8 -1 t8 -1 m8 -1 l7 -1"/>
+  </g>
+</svg>

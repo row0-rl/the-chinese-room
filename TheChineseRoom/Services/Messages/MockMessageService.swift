@@ -3,17 +3,18 @@ struct MockMessageService: MessageService {
     // Never seed a Chinese/Korean session with the English/French demo card.
     static func openingMessage(for mode: LanguageMode) -> LearningMessage {
         func expression(_ language: LanguageProfile) -> String {
-            switch language.id {
-            case LanguageCatalog.simplifiedChinese.id: return "我饿了。"
-            case LanguageCatalog.koreanHangul.id: return "배고파요."
-            case LanguageCatalog.frenchFrance.id: return "J’ai faim."
-            case LanguageCatalog.spanishSpain.id: return "Tengo hambre."
-            case LanguageCatalog.portugueseBrazil.id: return "Estou com fome."
-            case LanguageCatalog.italianItaly.id: return "Ho fame."
-            case LanguageCatalog.japaneseJapan.id: return "お腹が空きました。"
-            case LanguageCatalog.russianRussia.id: return "Я голоден."
-            case LanguageCatalog.hindiIndia.id: return "मुझे भूख लगी है।"
-            case LanguageCatalog.swedishSweden.id: return "Jag är hungrig."
+            switch language.languageIdentity {
+            case "zh": return language.normalizedWriting("我饿了。")
+            case "yue": return language.normalizedWriting("我肚餓。")
+            case "ko": return "배고파요."
+            case "fr": return "J’ai faim."
+            case "es": return "Tengo hambre."
+            case "pt": return "Estou com fome."
+            case "it": return "Ho fame."
+            case "ja": return "お腹が空きました。"
+            case "ru": return "Я голоден."
+            case "hi": return "मुझे भूख लगी है।"
+            case "sv": return "Jag är hungrig."
             default: return "I am hungry."
             }
         }

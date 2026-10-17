@@ -34,7 +34,7 @@ final class RoomStore {
                 guard let mode = LanguageCatalog.mode(id: session.modeID) else { continue }
                 insert(mode, lastUsedAt: session.updatedAt)
             }
-            if let selectedMode, selectedMode.source.id != selectedMode.target.id,
+            if let selectedMode, selectedMode.hasDistinctLanguages,
                !rooms.contains(where: { $0.modeID == selectedMode.id }) {
                 insert(selectedMode)
             }
@@ -54,7 +54,7 @@ final class RoomStore {
     /// Adding the same pair reopens its existing room, including archived rooms.
     @discardableResult
     func add(_ mode: LanguageMode) -> RoomRecord? {
-        guard mode.source.id != mode.target.id else { return nil }
+        guard mode.hasDistinctLanguages else { return nil }
         let room = rooms.first { $0.modeID == mode.id } ?? insert(mode)
         select(room)
         return room

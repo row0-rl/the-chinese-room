@@ -1,8 +1,6 @@
 import Foundation
 import SwiftData
 
-// The appearance UI lives in UIKit; this harness only needs its option names.
-enum AppAppearance { case system, light, dark }
 
 // Replace hardware adapters only; exercise the production store and queue.
 typealias OnDeviceSpeechService = SilentSpeechService
@@ -249,6 +247,25 @@ actor ControlledMessages: MessageService {
         let background = ControlledMessages()
         let fresh = MessageStore(service: background)
         let container = try ModelContainer(for: MessageSessionRecord.self, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
+        // Saving follows message identity, survives persistence, and reads legacy history.
+        let savedStore = MessageStore(service: MockMessageService(), persistsMessageHistory: true)
+        savedStore.attachPersistence(container.mainContext)
+        let savedID = savedStore.currentMessage.id
+        savedStore.toggleSaved(for: savedID)
+        precondition(savedStore.currentMessage.isSaved)
+        let savedRecord = try container.mainContext.fetch(FetchDescriptor<MessageSessionRecord>()).first!
+        precondition(savedRecord.messages.first(where: { $0.id == savedID })?.isSaved == true)
+        let reopened = MessageStore(service: MockMessageService(), persistsMessageHistory: true)
+        reopened.attachPersistence(container.mainContext)
+        precondition(reopened.currentMessage.id == savedID && reopened.currentMessage.isSaved)
+        reopened.toggleSaved(for: savedID)
+        precondition(!savedRecord.messages.first(where: { $0.id == savedID })!.isSaved)
+        var legacyJSON = try JSONSerialization.jsonObject(with: savedRecord.messagesData) as! [[String: Any]]
+        for index in legacyJSON.indices { legacyJSON[index].removeValue(forKey: "isSaved") }
+        savedRecord.messagesData = try JSONSerialization.data(withJSONObject: legacyJSON)
+        precondition(savedRecord.messages.first?.id == savedID && savedRecord.messages.first?.isSaved == false)
+        print("PASS: corner save, unsave, history restoration, and legacy saved-state decoding")
+
         // History and prefetch may load behind the title, but audio waits for the visible main screen.
         let speech = RecordingSpeech()
         let startup = MessageStore(service: MockMessageService(), speechService: speech, usesLocalMessages: false)

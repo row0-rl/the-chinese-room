@@ -10,8 +10,14 @@ actor AppleMessageRuntime {
     let scenario: String
     var segmentationCalls = 0
     var glossCalls = 0
+    var regionalCalls = 0
     init(events: Events, scenario: String = "normal") { self.events = events; self.scenario = scenario }
     func segmentText(to prompt: String, languages: [LanguageProfile]) async throws -> String {
+        if scenario == "cantonese" {
+            precondition(prompt.contains("我肚餓"))
+            await events.append("segmentation")
+            return "我|肚餓"
+        }
         precondition(prompt.contains("J'ai faim"))
         precondition(prompt.contains("inserting |"))
         await events.append("segmentation")
@@ -25,13 +31,33 @@ actor AppleMessageRuntime {
         return "J'ai| faim"
     }
     func transformText(to prompt: String, languages: [LanguageProfile], instructions: String, greedy: Bool = false) async throws -> String {
-        preconditionFailure("Translation pipeline must not request Hanja eagerly")
+        await events.append("regional")
+        regionalCalls += 1
+        precondition(instructions == MessageGenerationPrompt.regionalFormInstructions)
+        if scenario == "cantonese" {
+            precondition(prompt.contains("Hong Kong Cantonese") && prompt.contains("我饿了"))
+            precondition(languages.first?.languageIdentity == "yue")
+            return "我肚饿。" // The selected Traditional form is enforced locally afterward.
+        }
+        precondition(prompt.contains("Québécois French") && prompt.contains("I am hungry"))
+        precondition(languages.first?.localeIdentifier == "fr-CA")
+        if scenario == "regionalCancel" { throw CancellationError() }
+        if scenario == "regionalFailure" || (scenario == "regionalRepair" && regionalCalls == 1) { return "" }
+        if scenario == "regionalRepair" { precondition(prompt.contains("Correct this issue:")) }
+        return "J'ai faim."
     }
     func respond<T: Generable>(to prompt: String, generating type: T.Type, languages: [LanguageProfile]) async throws -> T {
         if type == GeneratedSource.self {
             precondition(!prompt.contains("French"))
             await events.append("source")
+            if scenario == "cantonese" { return try T(GeneratedContent(json: #"{"sourceText":"我餓了。"}"#)) }
+            if scenario.hasPrefix("regional") { precondition(prompt.contains("British English")) }
             return try T(GeneratedContent(json: #"{"sourceText":"I am hungry."}"#))
+        }
+        if scenario == "cantonese" {
+            precondition(type == GeneratedGlosses.self && prompt.contains("我肚餓"))
+            await events.append("glosses")
+            return try T(GeneratedContent(json: #"{"glosses":[{"chunkID":0,"literalText":"我"},{"chunkID":1,"literalText":"饿"}]}"#))
         }
         precondition(prompt.contains("J'ai faim"))
         precondition(type == GeneratedGlosses.self)
@@ -148,5 +174,36 @@ struct Translator: TextTranslationService {
         catch is CancellationError { }
         precondition(bridge.currentRequest == nil)
         print("PASS: four-stage pipeline, segmentation gate/repair, gloss IDs/targeted repair, failure isolation, and cancellation")
+
+        let british = LanguageCatalog.language(id: "english_uk")!
+        let quebec = LanguageCatalog.language(id: "french_canada")!
+        let regionalMode = LanguageMode(source: british, target: quebec)
+        for scenario in ["regional", "regionalRepair", "regionalFailure", "regionalCancel"] {
+            let trace = Events()
+            let runtime = AppleMessageRuntime(events: trace, scenario: scenario)
+            let regional = FoundationModelsMessageService(runtime: runtime, translator: Translator(events: trace))
+            do {
+                let card = try await regional.message(for: "Me be hungry", languageMode: regionalMode)
+                precondition(scenario == "regional" || scenario == "regionalRepair")
+                precondition(card.targetText == "J'ai faim" && !card.literalChunks.isEmpty)
+            } catch FoundationModelsServiceError.languageMismatch(let target) {
+                precondition(scenario == "regionalFailure" && target.id == quebec.id)
+            } catch is CancellationError { precondition(scenario == "regionalCancel") }
+            let values = await trace.values
+            let calls = await runtime.regionalCalls
+            precondition(calls == (scenario == "regionalRepair" || scenario == "regionalFailure" ? 2 : 1))
+            if scenario == "regional" { precondition(values == ["source", "apple", "regional", "segmentation", "glosses"]) }
+            if scenario == "regionalFailure" || scenario == "regionalCancel" { precondition(!values.contains("segmentation")) }
+        }
+        let chineseTrace = Events()
+        let chineseMode = LanguageMode(source: LanguageCatalog.simplifiedChinese,
+            target: LanguageCatalog.language(id: "cantonese_hong_kong")!)
+        let chinese = FoundationModelsMessageService(runtime: AppleMessageRuntime(events: chineseTrace, scenario: "cantonese"),
+            translator: Translator(events: chineseTrace))
+        let chineseCard = try await chinese.message(for: "我餓了", languageMode: chineseMode)
+        precondition(chineseCard.normalizedSourceText == "我饿了" && chineseCard.targetText == "我肚餓")
+        let chineseCalls = await chineseTrace.values
+        precondition(chineseCalls == ["source", "regional", "segmentation", "glosses"])
+        print("PASS: regional prompts, adaptation before chunks, bounded repair/failure, cancellation, and direct Mandarin–Cantonese conversion")
     }
 }

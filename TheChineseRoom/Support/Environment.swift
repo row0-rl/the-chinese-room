@@ -95,12 +95,65 @@ enum AppAppearance: String, CaseIterable, Identifiable {
     static let storageKey = "appAppearance"
     var id: Self { self }
 
-    var colorScheme: ColorScheme? {
+    var interfaceStyle: UIUserInterfaceStyle {
         switch self {
-        case .system: nil
+        case .system: .unspecified
         case .light: .light
         case .dark: .dark
         }
+    }
+
+    /// A preview launch choice seeds the setting once. Leaving it in the
+    /// argument domain would take precedence over every subsequent picker edit.
+    static func consumeLaunchOverride(in defaults: UserDefaults = .standard) {
+        var arguments = defaults.volatileDomain(forName: UserDefaults.argumentDomain)
+        guard let value = arguments.removeValue(forKey: storageKey) else { return }
+        defaults.setVolatileDomain(arguments, forName: UserDefaults.argumentDomain)
+        if let value = value as? String, let choice = Self(rawValue: value) {
+            defaults.set(choice.rawValue, forKey: storageKey)
+        }
+    }
+}
+
+extension View {
+    /// Apply to the hosting window so presented sheets update too. Unspecified
+    /// removes the override and resumes following the device's current style.
+    func appAppearance(_ appearance: AppAppearance) -> some View {
+        background {
+            WindowAppearanceOverride(appearance: appearance)
+                .frame(width: 0, height: 0)
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
+        }
+    }
+}
+
+private struct WindowAppearanceOverride: UIViewRepresentable {
+    let appearance: AppAppearance
+
+    func makeUIView(context: Context) -> WindowAppearanceView {
+        let view = WindowAppearanceView()
+        view.style = appearance.interfaceStyle
+        return view
+    }
+
+    func updateUIView(_ view: WindowAppearanceView, context: Context) {
+        view.style = appearance.interfaceStyle
+        view.applyAppearance()
+    }
+}
+
+private final class WindowAppearanceView: UIView {
+    var style: UIUserInterfaceStyle = .unspecified
+
+    override func didMoveToWindow() {
+        super.didMoveToWindow()
+        applyAppearance()
+    }
+
+    func applyAppearance() {
+        guard let window, window.overrideUserInterfaceStyle != style else { return }
+        window.overrideUserInterfaceStyle = style
     }
 }
 
@@ -110,6 +163,11 @@ extension UIColor {
                                                 dark: UIColor(hex: 0x1F1813))
     static let chineseRoomInk = adaptive(light: .black, dark: UIColor(hex: 0xF0E2CA))
     static let chineseRoomCard = adaptive(light: UIColor(white: 1, alpha: 0.5), dark: UIColor(hex: 0x2D241C))
+    // Opaque equivalent of the translucent card over the notebook background,
+    // used when overlapping projected paper triangles are composited.
+    static let chineseRoomSurface = adaptive(light: UIColor(hex: 0xF4EDDF), dark: UIColor(hex: 0x2D241C))
+    static let chineseRoomFold = adaptive(light: UIColor(hex: 0xF4DB8B), dark: UIColor(hex: 0x92703B))
+    static let chineseRoomPaperBack = adaptive(light: UIColor(hex: 0xE6DBC5), dark: UIColor(hex: 0x443629))
     static let chineseRoomRule = adaptive(light: UIColor(red: 0.94, green: 0.81, blue: 0.34, alpha: 0.65),
                                           dark: UIColor(hex: 0xE4A949, alpha: 0.29))
 
@@ -133,6 +191,9 @@ extension Color {
     static let chineseRoomBackground = Color(uiColor: .chineseRoomBackground)
     static let chineseRoomInk = Color(uiColor: .chineseRoomInk)
     static let chineseRoomCard = Color(uiColor: .chineseRoomCard)
+    static let chineseRoomSurface = Color(uiColor: .chineseRoomSurface)
+    static let chineseRoomFold = Color(uiColor: .chineseRoomFold)
+    static let chineseRoomPaperBack = Color(uiColor: .chineseRoomPaperBack)
     static let chineseRoomRule = Color(uiColor: .chineseRoomRule)
 
     static func chineseRoomControl(_ lightOpacity: CGFloat) -> Color {

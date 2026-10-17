@@ -70,6 +70,47 @@ struct PencilRectangle: View {
     }
 }
 
+/// Render projected paper contours with the same graphite as the flat sheet.
+struct PencilJoinedFoldOutline: View {
+    let seed: UUID
+    let contours: [[CGPoint]]
+    @Environment(\.displayScale) private var displayScale
+    @State private var rendered: (image: UIImage, bounds: CGRect)?
+
+    var body: some View {
+        let vertices = contours.flatMap { $0 }
+        let minX = (vertices.map(\.x).min() ?? 0) - 8
+        let minY = (vertices.map(\.y).min() ?? 0) - 8
+        let bounds = CGRect(x: minX, y: minY,
+            width: (vertices.map(\.x).max() ?? 0) - minX + 8,
+            height: (vertices.map(\.y).max() ?? 0) - minY + 8)
+        let paths = contours.map { $0.map { PencilBorderPoint(x: $0.x - minX, y: $0.y - minY) } }
+        let request = PencilBorderRequest(seed: seed, size: bounds.size, scale: displayScale,
+            cornerRadius: 0, lineWidth: 3.3, wobble: 0, foldContours: paths, isFold: true)
+        GeometryReader { _ in
+            if let rendered {
+                Image(uiImage: rendered.image).renderingMode(.template).resizable()
+                    .foregroundStyle(Color.chineseRoomInk)
+                    .frame(width: rendered.bounds.width, height: rendered.bounds.height)
+                    .position(x: rendered.bounds.midX, y: rendered.bounds.midY)
+            }
+        }
+        .opacity(0.55)
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+        .task(id: request) {
+            guard !vertices.isEmpty else { rendered = nil; return }
+            guard let image = await PencilBorderRenderer.shared.image(for: request), !Task.isCancelled else { return }
+            rendered = (image, bounds)
+        }
+    }
+}
+
+private struct PencilBorderPoint: Hashable, Sendable {
+    let x: CGFloat
+    let y: CGFloat
+}
+
 private struct PencilBorderRequest: Hashable, Sendable {
     let seed: UUID
     let pixelWidth: Int
@@ -79,8 +120,16 @@ private struct PencilBorderRequest: Hashable, Sendable {
     let cornerJitter: CGFloat
     let lineWidth: CGFloat
     let wobble: CGFloat
+    let foldPoints: [PencilBorderPoint]
+    let foldContours: [[PencilBorderPoint]]
+    let isClosed: Bool
+    let isFold: Bool
 
-    init(seed: UUID, size: CGSize, scale: CGFloat, cornerRadius: CGFloat, cornerJitter: CGFloat = 6, lineWidth: CGFloat, wobble: CGFloat) {
+    init(seed: UUID, size: CGSize, scale: CGFloat, cornerRadius: CGFloat, cornerJitter: CGFloat = 6, lineWidth: CGFloat, wobble: CGFloat, foldPoints: [PencilBorderPoint] = [], foldContours: [[PencilBorderPoint]] = [], isClosed: Bool = true, isFold: Bool = false) {
+        self.foldContours = foldContours
+        self.isClosed = isClosed
+        self.foldPoints = foldPoints
+        self.isFold = isFold
         self.seed = seed
         self.scale = max(1, scale)
         pixelWidth = size.width.isFinite ? Int((max(0, size.width) * self.scale).rounded()) : 0
@@ -96,7 +145,7 @@ private struct PencilBorderRequest: Hashable, Sendable {
     }
 
     var cacheKey: NSString {
-        "\(seed.uuidString):\(pixelWidth):\(pixelHeight):\(scale):\(cornerRadius):\(cornerJitter):\(lineWidth):\(wobble)" as NSString
+        "\(seed.uuidString):\(pixelWidth):\(pixelHeight):\(scale):\(cornerRadius):\(cornerJitter):\(lineWidth):\(wobble):\(foldPoints):\(foldContours):\(isClosed):\(isFold)" as NSString
     }
 }
 
@@ -123,7 +172,7 @@ private actor PencilBorderRenderer {
     static let shared = PencilBorderRenderer()
     private let cache: NSCache<NSString, UIImage> = {
         let cache = NSCache<NSString, UIImage>()
-        cache.countLimit = 24
+        cache.countLimit = 96
         cache.totalCostLimit = 16 * 1_024 * 1_024
         return cache
     }()
@@ -195,8 +244,16 @@ private enum PencilBorderDrawing {
     }
 
     static func make(_ request: PencilBorderRequest) -> PKDrawing {
+        if !request.foldContours.isEmpty {
+            return PKDrawing(strokes: request.foldContours.flatMap { contour in
+                let segment = PencilBorderRequest(seed: request.seed, size: request.size, scale: request.scale,
+                    cornerRadius: 0, lineWidth: request.lineWidth, wobble: 0,
+                    foldPoints: contour, isClosed: false, isFold: true)
+                return make(segment).strokes
+            })
+        }
         var random = generator(seed: request.seed)
-        let samples = samples(for: request, random: &random)
+        let samples = request.isFold ? foldSamples(for: request) : samples(for: request, random: &random)
         guard samples.count > 1 else { return PKDrawing() }
 
         let pressurePhase = random.unit() * .pi * 2
@@ -238,6 +295,31 @@ private enum PencilBorderDrawing {
             )
         }
         return PKDrawing(strokes: strokes)
+    }
+
+    private static func foldSamples(for request: PencilBorderRequest) -> [Sample] {
+        let vertices = request.foldPoints.map { CGPoint(x: $0.x, y: $0.y) }
+        var result: [Sample] = []
+        let segmentCount = request.isClosed ? vertices.count : max(0, vertices.count - 1)
+        for index in 0..<segmentCount {
+            let start = vertices[index]
+            let end = vertices[(index + 1) % vertices.count]
+            let length = hypot(end.x - start.x, end.y - start.y)
+            guard length > 0.001 else { continue }
+            let normal = CGVector(dx: (end.y - start.y) / length, dy: -(end.x - start.x) / length)
+            let count = max(1, Int(ceil(length / 2)))
+            for step in 0..<count {
+                let t = CGFloat(step) / CGFloat(count)
+                result.append(Sample(point: CGPoint(x: start.x + (end.x - start.x) * t,
+                                                    y: start.y + (end.y - start.y) * t), normal: normal))
+            }
+        }
+        if request.isClosed, let first = result.first {
+            result.append(first)
+        } else if let last = vertices.last, let normal = result.last?.normal {
+            result.append(Sample(point: last, normal: normal))
+        }
+        return result
     }
 
     private static func interpolate(_ anchors: [CGFloat], at progress: CGFloat) -> CGFloat {

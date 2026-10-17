@@ -54,7 +54,7 @@ final class SystemDictationService: DictationService {
             return
         }
         let service = SystemDictationService()
-        let locale = LanguageModeStorage.currentMode?.source.localeIdentifier ?? "en-US"
+        let locale = LanguageModeStorage.currentMode?.source.dictationLocaleIdentifier ?? "en-US"
         service.prepare(localeIdentifier: locale)
         for attempt in 1...3 {
             do {

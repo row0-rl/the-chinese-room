@@ -40,7 +40,7 @@ enum GeneratedLanguageCheck {
             }
         }
         guard !expected.localeIdentifier.hasPrefix("en") else { return nil }
-        let asianSource = expected.localeIdentifier.hasPrefix("zh")
+        let asianSource = expected.learningLanguage == .chinese
             || expected.localeIdentifier.hasPrefix("ko")
             || expected.localeIdentifier.hasPrefix("ja")
         for match in matches(#"[A-Za-z]+(?:[ '’-]+[A-Za-z]+)*"#, in: candidate) {

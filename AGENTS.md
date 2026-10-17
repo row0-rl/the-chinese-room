@@ -23,7 +23,7 @@ A message contains:
 - Press to listen to target language powered by a TTS model.
 - Example usage/sentences of the expression in both languages.
 
-Messages use four sequential stages: Apple Foundation Models generates or normalizes the original expression, Apple Translation translates it, Apple Foundation Models segments the target expression using delimiter-based text output in permissive transformation mode, and one Apple Foundation Models request glosses the validated fixed chunks. Segmentation has one correction attempt; gloss repair requests only missing or invalid chunk IDs while retaining valid glosses. Optional usage examples are currently omitted.
+Messages normally use four sequential stages: Apple Foundation Models generates or normalizes the original expression, Apple Translation translates it, Apple Foundation Models segments the target expression using delimiter-based text output in permissive transformation mode, and one Apple Foundation Models request glosses the validated fixed chunks. Target forms outside the translation baselines add a bounded on-device regional transformation before segmentation; this also applies to the Mexican Spanish picker default. Mandarin–Cantonese pairs use this transformation directly because Apple Translation rejects them as the same base language. Cantonese uses a Chinese writing model with explicit instructions; dialect accuracy is experimental. Chinese writing systems are normalized locally. Segmentation has one correction attempt; gloss repair requests only missing or invalid chunk IDs while retaining valid glosses. Optional usage examples are currently omitted.
 
 ### Rooms
 
@@ -31,8 +31,17 @@ Users create saved Rooms, each representing one directional language pair.
 Room selection and management live exclusively in Settings › Rooms. Selecting a
 Room restores its message history and last viewed card. Add a room creates a
 Room; adding an existing pair opens that Room, including archived Rooms.
-The two language pickers exclude the opposite selection; matching language IDs
-are rejected when creating, switching, or restoring a Room.
+Each side chooses a language and an Origin / form. Every language has multiple
+regional forms; Chinese includes Mandarin and Cantonese with explicit writing
+systems. New rooms and language changes prefer US English, France French, mainland
+Mandarin in Simplified Chinese, standard South Korean, Mexican Spanish, Brazilian
+Portuguese, Italy Italian, standard Japanese, Russia Russian, standard Hindi, and
+Sweden Swedish. New rooms do not automatically advance to an unused region.
+Mandarin–Cantonese pairs use Hong Kong Cantonese on the Cantonese side to keep the
+spoken languages distinct. Explicit choices in existing rooms remain intact. Room labels and IDs include the selected forms, with independent history
+for each pair. Legacy form IDs remain unchanged. The pickers exclude the opposite
+spoken language; two regional forms of the same language cannot form a Room.
+Mandarin and Cantonese have distinct spoken-language identities.
 Long-press a Room to pin, rename, or archive it. Archived Rooms can be restored
 from the same settings screen. The main screen has only the Settings gear.
 Pinned Rooms come first; other Rooms use a snapshot of recent use at launch and
@@ -42,6 +51,27 @@ Existing saved sessions and the previously selected pair become Rooms on upgrade
 Archiving hides a Room without deleting its messages. Archiving every Room returns
 to a create-or-restore screen. Cross-launch message history is enabled.
 
+### Saved messages
+
+Tap a message sheet’s top-right corner to toggle saving immediately.
+Drag that corner down-left to save the expression, or
+up-right to unsave. The fold follows the finger and settles to the nearest state
+on release; corner drags do not page the feed. The saved fold rests at 48 points,
+can stretch to 160 points while dragging, and springs back to its resting size
+on release. A cylindrical surface model bends the corner without stretching
+its paper coordinates. The tip target follows diagonal progress and the finger's
+movement along the curl; changing that target rotates the curl axis, so both
+joins come from the same surface rather than independent edge offsets.
+The front, yellow backside, silhouette, pencil contours and shadow are projected
+from that surface. Unsaved sheets have a completely flat corner. Saving gives
+a light haptic. This is a geometric page-curl approximation, not a material
+physics simulation; the curved patch does not currently warp message text or
+notebook rules.
+VoiceOver exposes a save/unsave action. The first-use hint disappears after saving. Reduce Motion uses a short
+transition. Save state is stored with the message in its Room history; legacy
+messages default to unsaved. Saved collections and feed resurfacing are not yet
+implemented.
+
 ### Random Messages
 
 On opening the app, the page shows a random message. User can swipe down to generate a next random message, and swipe up to go back to the previous message.
@@ -49,6 +79,9 @@ On opening the app, the page shows a random message. User can swipe down to gene
 ### User Sent Messages
 
 On the bottom of the page is an input area with a hold-to-speak dictation button as the main input interface, and a keyboard to type option on the right. Text input from this input area becomes the expression for the next message.
+
+In typing mode, swiping down over the message area or typing bar dismisses the
+keyboard and returns to dictation controls without clearing the typed draft.
 
 Input text should be normalized. For example, "Me be hungry" likely means "I am hungry".
 
@@ -88,6 +121,9 @@ Main background color is light beige. Text is black.
 Settings › Appearance chooses System, Light or Dark (stored in `UserDefaults`). Dark uses a warm charcoal palette: background
 `#1F1813`, cream ink `#F0E2CA`, card fill `#2D241C`, and amber notebook rules.
 All app colors come from the adaptive palette in `Support/Environment.swift`.
+Appearance applies to the hosting window so the main screen and open sheets
+update together. System clears the window override. Preview launch appearance
+options seed the preference once and cannot override later picker changes.
 PencilKit text, borders and rules render black or yellow and are tinted for the current appearance when drawn.
 
 ### Hanja annotations

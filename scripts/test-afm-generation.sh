@@ -8,7 +8,8 @@ TEST_DIR="$(mktemp -d "${TMPDIR:-/tmp}/room-afm.XXXXXX")"
 trap 'rm -rf "$TEST_DIR"' EXIT
 cd "$ROOT_DIR"
 xcrun swiftc -DDEBUG -target "$(uname -m)-apple-macos27.0" \
-  TheChineseRoom/Models/LearningMessage.swift \
+  tests/Support/AppAppearanceStub.swift \
+  TheChineseRoom/Models/{LearningMessage,LanguageVariations}.swift \
   TheChineseRoom/Services/Pronunciation/{AppleJapanesePronunciationService,AppleIPAPronunciationService,IPANotation,ApplePinyinNotation,JapaneseRomajiNotation,KoreanRevisedRomanization}.swift \
   TheChineseRoom/Services/Messages/{AppleMessageRuntime,AppleTranslationService,MessageService,FoundationModelsMessageService,GeneratedMessage,GeneratedLanguageCheck,MessageGenerationPrompt}.swift \
   tests/AFMGenerationSmoke.swift -o "$TEST_DIR/check"

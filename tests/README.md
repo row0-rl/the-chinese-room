@@ -8,12 +8,33 @@ with the previous single-entity schema, then verifies duplicate-pair prevention,
 directional histories, stable tabs, pin ordering, rename persistence, selection,
 per-room card positions, archive-all, and restoration without deleting messages.
 It also checks first-room setup and same-language rejection.
+Regional coverage checks all form IDs, default prefills, legacy room identity, same-spoken-language
+exclusions across regions, Mandarin/Cantonese identities, Chinese scripts, origin
+labels, and separate histories for Mexican and Chilean Spanish Rooms.
+
+`bash scripts/test-translation-pipeline.sh` also verifies regional adaptation
+before segmentation/glossing, bounded repairs, cancellation, and direct
+Mandarin–Cantonese transformations using controlled model responses. It tests
+request wiring and failure handling, not linguistic accuracy.
 
 For layout inspection without device-only Translation and speech, launch a Debug
 build with `--rooms-preview`. This uses local starter cards, disables generation
 and audio, and shows the Local indicator. It still exercises real Room persistence.
 Normal launches continue to use the on-device services. Translation, dictation,
 and speech integration should be checked on the target iPhone.
+
+## Appearance
+
+With an iOS 27 simulator booted, run `bash scripts/test-appearance.sh`.
+The script compiles an isolated simulator app with the production appearance
+adapter and opens a real SwiftUI settings sheet. It verifies repeated System,
+Light, and Dark transitions in both SwiftUI environments and UIKit traits,
+checks the palette colors, and confirms that System clears the window override.
+A second launch reproduces the forced-Light preview argument and verifies that
+it seeds the initial preference without locking subsequent picker changes or
+removing unrelated launch arguments. The fixture is uninstalled afterward and
+does not modify the main app's preferences. Set `SIMULATOR_ID` to target a
+particular booted simulator.
 
 ## Generated-language checks
 
@@ -104,6 +125,17 @@ Some languages can return transformations despite not being advertised by
 `test-pinyin-notation.sh` also checks IPA diacritics, formatting, Unicode offsets,
 and rejection of mismatched source annotations. `test-message-lifecycle.sh` covers
 IPA request deduplication, failure/retry, caching, persistence, and legacy records.
+
+## Regional forms
+
+`bash scripts/test-regional-forms.sh` supplies fixed base translations and runs
+the production on-device regional transformation for British English, Mexican
+Spanish, Chilean Spanish, and Hong Kong Cantonese. It requires macOS 27 and an
+available Apple Intelligence model. It prints full outputs; a structural pass
+does not certify regional or dialect accuracy, nor test Apple Translation or
+iPhone performance. Rooms and translation pipeline regressions cover saved form
+identity, isolated histories, Chinese scripts, bounded repair, and cancellation.
+See [RegionalFormsResults.md](RegionalFormsResults.md) for observed outputs and limitations.
 
 ## Hanja annotations
 

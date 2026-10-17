@@ -1,6 +1,6 @@
 # On-device message generation
 
-Messages use four sequential stages:
+Translation baseline forms use four sequential stages:
 
 1. Apple Foundation Models generates an everyday source expression or normalizes learner input.
 2. Apple Translation translates that expression.
@@ -26,12 +26,32 @@ calls and one Apple Translation call; retries add calls only where necessary.
 The runtime serializes requests, propagates cancellation, and creates a fresh
 session for each request. Breakdown failure leaves the completed source and
 translation available, with no fabricated glosses. Cancellation still propagates.
+
+Rooms select a language and regional origin/form for both sides. Source generation
+uses the selected form's spelling, vocabulary, grammar, and writing system.
+Apple Translation receives the selected locales. For target forms outside the translation baselines,
+one plain-text Foundation Models transformation adapts the translation to the
+selected form before segmentation; invalid or empty output gets one repair attempt.
+Failed adaptation fails the card rather than silently returning another form.
+Chinese script conversion is enforced locally before segmentation.
+
+Mandarin–Cantonese pairings use a direct on-device text transformation because
+Apple Translation rejects these pairings as the same base language. Cantonese
+uses the available Chinese writing model and explicit Cantonese instructions;
+this is experimental prompted generation, not advertised Cantonese model support.
+Regional spelling/wording and dialect correctness require native-speaker review
+and target-iPhone checks. Successful structural checks do not prove these qualities.
+Small prompt usage cues ground British English, Mexican and Chilean Spanish, and
+vernacular Cantonese after live checks exposed weak region-only prompting; these
+are examples, not text substitutions. See [observed results](../tests/RegionalFormsResults.md).
+The voice catalog remains unchanged; new forms reuse existing language voices.
+
 Guided generation and validation do not establish linguistic correctness or ideal
 chunk granularity. Optional usage examples remain disabled. Message history and the last viewed card
 are persisted separately for each saved Room (directional language pair).
 
 Source generation and glossing use SystemLanguageModel.default with native guided
-generation and default guardrails. Segmentation alone uses permissive text
+generation and default guardrails. Segmentation and regional adaptation use permissive text
 transformation; the model can still refuse, and gloss generation may still trigger
 default guardrails. No bundled
 model, external Swift package, custom tokenizer, or raw JSON parsing is required.
