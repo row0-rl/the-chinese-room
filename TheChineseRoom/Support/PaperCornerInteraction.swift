@@ -14,11 +14,28 @@ enum PaperCornerInteraction {
         return min(maximumProgress, max(0, (isSaved ? 1 : 0) + diagonal / travel))
     }
 
+    static func shouldToggle(isSaved: Bool, translation: CGSize) -> Bool {
+        // Quadrant III in mathematical coordinates is down-left on screen.
+        // Only that quadrant can save a flat corner; any drag can unsave it.
+        isSaved || (translation.width < 0 && translation.height > 0)
+    }
+
     static func displacement(foldSize: CGFloat, translation: CGSize) -> CGSize {
         let size = min(maximumFoldSize, max(0, foldSize))
         let tangent = (translation.width + translation.height) * 0.35
         let offset = min(size * 0.4, max(-size * 0.4, tangent))
         return CGSize(width: -size * 0.7 + offset, height: size * 0.7 + offset)
+    }
+
+    /// Stretch graphite along the projected edge, but retain its screen width.
+    static func ribbonTransform(start: CGPoint, end: CGPoint, sourceStart: CGFloat,
+                                sourceLength: CGFloat) -> CGAffineTransform? {
+        let dx = end.x - start.x, dy = end.y - start.y
+        let length = hypot(dx, dy)
+        guard length > 0.00001, sourceLength > 0.00001 else { return nil }
+        let a = dx / sourceLength, b = dy / sourceLength
+        return CGAffineTransform(a: a, b: b, c: -dy / length, d: dx / length,
+                                 tx: start.x - a * sourceStart, ty: start.y - b * sourceStart)
     }
 
     static func startsInCorner(_ location: CGPoint, paperFrame: CGRect) -> Bool {

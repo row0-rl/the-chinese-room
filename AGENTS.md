@@ -54,19 +54,25 @@ to a create-or-restore screen. Cross-launch message history is enabled.
 ### Saved messages
 
 Tap a message sheet’s top-right corner to toggle saving immediately.
-Drag that corner down-left to save the expression, or
-up-right to unsave. The fold follows the finger and settles to the nearest state
-on release; corner drags do not page the feed. The saved fold rests at 64 points,
+An unsaved corner saves only for a completed down-left drag (quadrant III:
+negative screen x and positive screen y). The other quadrants and exact axes
+leave it unsaved. A saved corner unsaves for any completed drag, regardless of
+direction or distance. The fold follows the finger during the drag and springs to the newly
+toggled state on release; corner drags do not page the feed. The saved fold rests at 64 points,
 can stretch to 160 points while dragging, and springs back to its resting size
 on release. A cylindrical surface model bends the corner without stretching
 its paper coordinates. The tip target follows diagonal progress and the finger's
 movement along the curl; changing that target rotates the curl axis, so both
 joins come from the same surface rather than independent edge offsets.
-The front, yellow backside, silhouette and pencil contours are projected
+The front, muted red backside, silhouette and pencil contours are projected
 from that surface. The entire border is a single projected pencil stroke while
 curled, so the joins have no independently clipped stroke ends. Pencil textures
-are prepared once in flat paper coordinates and projected in Canvas with the
-current curl pose; dragging never waits for a newly rasterized outline. The
+are prepared once as graphite strips and placed along the projected contour in
+Canvas with the current curl pose. The outline retains its 3.3-point screen width
+through the joins instead of thinning under foreshortening; the thin diagonal
+remains 0.8 points. Texture placement uses the current curl pose; dragging never waits for a newly rasterized outline. Interactive
+cards retain that same border renderer when flat, dragging and settled, avoiding
+a release crossfade between two overlapping outlines. The
 canvas covers the full projected paper bounds, including overflow beyond short
 cards. Front ink, opaque backside fill, and back ink render in depth order so
 the original bottom border cannot show through the lifted paper. The lifted

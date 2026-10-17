@@ -73,6 +73,17 @@ import Foundation
             let tip = corner.applying(curl.bandTransform(lower: end, upper: max(end + 1, curl.depth + 1)))
             precondition(hypot(tip.x - corner.x - delta.width, tip.y - corner.y - delta.height) < 0.00001)
         }
+        for end in [CGPoint(x: 10, y: 0), CGPoint(x: 0.1, y: 10), CGPoint(x: -5, y: 3), CGPoint(x: 0.01, y: 0)] {
+            let start = CGPoint(x: 2, y: 4)
+            let transform = PaperCornerInteraction.ribbonTransform(start: start, end: end, sourceStart: 35, sourceLength: 7)!
+            let a = CGPoint(x: 35, y: 0).applying(transform)
+            let b = CGPoint(x: 42, y: 0).applying(transform)
+            let widthPoint = CGPoint(x: 35, y: 3.3).applying(transform)
+            precondition(hypot(a.x - start.x, a.y - start.y) < 0.00001)
+            precondition(hypot(b.x - end.x, b.y - end.y) < 0.00001)
+            precondition(abs(hypot(widthPoint.x - a.x, widthPoint.y - a.y) - 3.3) < 0.00001,
+                         "Pencil width must stay constant even on a foreshortened connecting edge")
+        }
         let shortSize = CGSize(width: 350, height: 120)
         let shortVertices = [CGPoint(x: 0, y: 0), CGPoint(x: 350, y: 0), CGPoint(x: 350, y: 120), CGPoint(x: 0, y: 120)]
         let shortCurl = PaperCylinder(corner: CGPoint(x: 350, y: 0), displacement: CGSize(width: -37, height: 137))
@@ -80,6 +91,13 @@ import Foundation
         precondition(shortCurl.project(CGPoint(x: 350, y: 0)).point.y > shortSize.height)
         for point in shortVertices {
             precondition(drawingBounds.contains(shortCurl.project(point).point), "Backside and ink must not be clipped to the original short card")
+        }
+        precondition(PaperCornerInteraction.shouldToggle(isSaved: false, translation: CGSize(width: -30, height: 30)))
+        for direction in [CGSize(width: 30, height: -30), CGSize(width: -30, height: -30),
+                          CGSize(width: 30, height: 30), CGSize(width: 0, height: -30),
+                          CGSize(width: 0, height: 30), CGSize(width: -30, height: 0), CGSize(width: 30, height: 0)] {
+            precondition(!PaperCornerInteraction.shouldToggle(isSaved: false, translation: direction))
+            precondition(PaperCornerInteraction.shouldToggle(isSaved: true, translation: direction))
         }
         let frame = CGRect(x: 20, y: 150, width: 360, height: 250)
         precondition(PaperCornerInteraction.startsInCorner(CGPoint(x: 365, y: 160), paperFrame: frame))

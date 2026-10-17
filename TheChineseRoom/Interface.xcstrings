@@ -2912,31 +2912,31 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Drag the corner down-left to save"
+            "value": "Drag the corner to save"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Glissez le coin vers le bas à gauche pour enregistrer"
+            "value": "Glissez le coin pour enregistrer"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "向左下拖动纸角以保存"
+            "value": "拖动纸角以保存"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "向左下拖動紙角以儲存"
+            "value": "拖動紙角以儲存"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "모서리를 왼쪽 아래로 끌어 저장"
+            "value": "모서리를 끌어 저장"
           }
         }
       }
@@ -2947,31 +2947,31 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Drag the corner up-right to unsave"
+            "value": "Drag the corner to unsave"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Glissez le coin vers le haut à droite pour retirer"
+            "value": "Glissez le coin pour retirer"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "向右上拖动纸角以取消保存"
+            "value": "拖动纸角以取消保存"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "向右上拖動紙角以取消儲存"
+            "value": "拖動紙角以取消儲存"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "모서리를 오른쪽 위로 끌어 저장 취소"
+            "value": "모서리를 끌어 저장 취소"
           }
         }
       }

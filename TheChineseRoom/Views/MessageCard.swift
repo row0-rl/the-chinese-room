@@ -383,7 +383,7 @@ struct MessagePaper<Content: View>: View {
                 PaperCylinderCutout(seed: seed, displacement: onToggleSaved != nil || isSaved ? curlDisplacement : .zero, includeFront: true)
             }
             .overlay {
-                if onToggleSaved == nil && !isSaved || hypot(curlDisplacement.width, curlDisplacement.height) <= 0.1 {
+                if onToggleSaved == nil && !isSaved {
                     PencilRectangle(seed: seed)
                 }
             }
@@ -410,13 +410,11 @@ struct MessagePaper<Content: View>: View {
                                     translation = drag.translation
                                 }
                                 .onEnded { value in
-                                    switch value {
-                                    case .first(let drag):
-                                        let saved = PaperCornerInteraction.progress(isSaved: isSaved, translation: drag.translation) >= 0.5
-                                        if saved != isSaved { commitSaveToggle(onToggleSaved) }
-                                    case .second:
-                                        commitSaveToggle(onToggleSaved)
+                                    if case .first(let drag) = value,
+                                       !PaperCornerInteraction.shouldToggle(isSaved: isSaved, translation: drag.translation) {
+                                        return
                                     }
+                                    commitSaveToggle(onToggleSaved)
                                 }
                         )
                         .accessibilityAddTraits(.isButton)
@@ -539,15 +537,15 @@ private struct PaperCylinderSurface: View, Animatable {
             let paper = CylinderPaperGeometry(seed: seed, size: proxy.size, displacement: displacement)
             let cylinder = paper.cylinder
             let lifted = cylinder.clip(paper.vertices, at: 0, above: true)
-            let back = cylinder.clip(lifted, at: .pi * cylinder.radius / 2, above: true)
+            let isFlat = hypot(displacement.width, displacement.height) <= 0.1
+            let back = isFlat ? [] : cylinder.clip(lifted, at: .pi * cylinder.radius / 2, above: true)
             let backFace = back.map { cylinder.project($0).point }
             let drawingBounds = cylinder.drawingBounds(vertices: paper.vertices, paperSize: proxy.size)
             PencilCurledSheetOutline(seed: seed, paperSize: proxy.size, vertices: paper.vertices,
-                                    cylinder: cylinder, crest: paper.crest, backFace: backFace,
+                                    cylinder: cylinder, crest: isFlat ? [] : paper.crest, backFace: backFace,
                                     drawingBounds: drawingBounds)
                 .frame(width: drawingBounds.width, height: drawingBounds.height)
                 .offset(x: drawingBounds.minX, y: drawingBounds.minY)
-                .opacity(hypot(displacement.width, displacement.height) > 0.1 ? 1 : 0)
 
         }
     }

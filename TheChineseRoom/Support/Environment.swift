@@ -166,7 +166,7 @@ extension UIColor {
     // Opaque equivalent of the translucent card over the notebook background,
     // used when overlapping projected paper triangles are composited.
     static let chineseRoomSurface = adaptive(light: UIColor(hex: 0xF4EDDF), dark: UIColor(hex: 0x2D241C))
-    static let chineseRoomFold = adaptive(light: UIColor(hex: 0xF4DB8B), dark: UIColor(hex: 0x92703B))
+    static let chineseRoomFold = adaptive(light: UIColor(hex: 0xE36A60), dark: UIColor(hex: 0xC95850))
     static let chineseRoomPaperBack = adaptive(light: UIColor(hex: 0xE6DBC5), dark: UIColor(hex: 0x443629))
     static let chineseRoomRule = adaptive(light: UIColor(red: 0.94, green: 0.81, blue: 0.34, alpha: 0.65),
                                           dark: UIColor(hex: 0xE4A949, alpha: 0.29))

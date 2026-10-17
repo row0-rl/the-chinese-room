@@ -84,11 +84,49 @@ struct PencilCurledSheetOutline: View {
     @State private var sheetTexture: UIImage?
     @State private var creaseTexture: UIImage?
 
+    private struct Ribbon {
+        let start: CGPoint
+        let end: CGPoint
+        let offset: CGFloat
+        let length: CGFloat
+    }
+
+    private var ribbons: [Ribbon] {
+        guard let first = vertices.first else { return [] }
+        var result: [Ribbon] = []
+        var previous = first
+        var offset: CGFloat = 0
+        // Short ribbons approximate the projected contour while keeping the
+        // graphite's perpendicular dimension independent of foreshortening.
+        let sampled = stride(from: 3, to: vertices.count, by: 3).map { vertices[$0] } + [first]
+        for point in sampled {
+            let length = hypot(point.x - previous.x, point.y - previous.y)
+            if length > 0.00001 {
+                let threshold = .pi * cylinder.radius / 2
+                let a = cylinder.distance(previous) - threshold, b = cylinder.distance(point) - threshold
+                if (a >= 0) != (b >= 0) {
+                    let t = a / (a - b)
+                    let split = CGPoint(x: previous.x + (point.x - previous.x) * t,
+                                        y: previous.y + (point.y - previous.y) * t)
+                    result.append(Ribbon(start: previous, end: split, offset: offset, length: length * t))
+                    result.append(Ribbon(start: split, end: point, offset: offset + length * t, length: length * (1 - t)))
+                } else {
+                    result.append(Ribbon(start: previous, end: point, offset: offset, length: length))
+                }
+                offset += length
+            }
+            previous = point
+        }
+        return result
+    }
+
     var body: some View {
-        let source = CGRect(x: -8, y: -8, width: paperSize.width + 16, height: paperSize.height + 16)
-        let contour = (vertices + Array(vertices.prefix(1))).map { PencilBorderPoint(x: $0.x + 8, y: $0.y + 8) }
+        let ribbons = ribbons
+        let perimeter = ((ribbons.last.map { $0.offset + $0.length } ?? 1) * 64).rounded() / 64
+        let source = CGRect(x: -8, y: -8, width: perimeter + 16, height: 16)
         let sheetRequest = PencilBorderRequest(seed: seed, size: source.size, scale: displayScale,
-            cornerRadius: 0, lineWidth: 3.3, wobble: 0, foldContours: [contour], isFold: true)
+            cornerRadius: 0, lineWidth: 3.3, wobble: 0,
+            foldContours: [[PencilBorderPoint(x: 8, y: 8), PencilBorderPoint(x: perimeter + 8, y: 8)]], isFold: true)
         let creaseRequest = PencilBorderRequest(seed: seed, size: CGSize(width: 272, height: 16), scale: displayScale,
             cornerRadius: 0, lineWidth: 0.8, wobble: 0,
             foldContours: [[PencilBorderPoint(x: 8, y: 8), PencilBorderPoint(x: 264, y: 8)]], isFold: true)
@@ -100,36 +138,36 @@ struct PencilCurledSheetOutline: View {
             }
             // Front ink is beneath the raised backside; back ink and the
             // crease are above it. All share one expanded drawing surface.
-            var paintedBack = false
             if let sheetTexture {
                 var texture = context.resolve(Image(uiImage: sheetTexture))
                 texture.shading = .color(Color.chineseRoomInk)
-                let bounds = [CGPoint(x: source.minX, y: source.minY), CGPoint(x: source.maxX, y: source.minY),
-                              CGPoint(x: source.maxX, y: source.maxY), CGPoint(x: source.minX, y: source.maxY)]
-                let distances = bounds.map { cylinder.distance($0) }
-                let bendEnd = .pi * cylinder.radius
-                let stops = [min(-1, distances.min() ?? -1)] + (0...48).map { CGFloat($0) * bendEnd / 48 }
-                    + [max(bendEnd + 1, distances.max() ?? bendEnd + 1)]
-                for (lower, upper) in zip(stops, stops.dropFirst()) where upper - lower > 0.00001 {
-                    if !paintedBack, lower >= bendEnd / 2 - 0.00001 {
-                        context.fill(backPath, with: .color(Color.chineseRoomFold))
-                        paintedBack = true
+                let threshold = .pi * cylinder.radius / 2
+                let contour = Path { path in
+                    path.addLines(vertices.map { cylinder.project($0).point })
+                    path.closeSubpath()
+                }.strokedPath(StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round))
+                for back in [false, true] {
+                    if back { context.fill(backPath, with: .color(Color.chineseRoomFold)) }
+                    for ribbon in ribbons {
+                        let q = (cylinder.distance(ribbon.start) + cylinder.distance(ribbon.end)) / 2
+                        guard (q >= threshold) == back,
+                              let transform = PaperCornerInteraction.ribbonTransform(
+                                start: cylinder.project(ribbon.start).point, end: cylinder.project(ribbon.end).point,
+                                sourceStart: ribbon.offset, sourceLength: ribbon.length) else { continue }
+                        var ink = context
+                        ink.opacity = 0.55
+                        // Keep ribbon joins inside one rounded outline, rather
+                        // than allowing rotated texture fringes to fan outward.
+                        ink.clip(to: contour)
+                        ink.concatenate(transform)
+                        ink.clip(to: Path(CGRect(x: ribbon.offset - 0.03, y: -8,
+                                                width: ribbon.length + 0.06, height: 16)))
+                        ink.draw(texture, in: source)
                     }
-                    let transform = cylinder.bandTransform(lower: lower, upper: upper)
-                    let polygon = cylinder.clip(cylinder.clip(bounds, at: lower - 0.03, above: true), at: upper + 0.03, above: false)
-                    guard polygon.count >= 3 else { continue }
-                    let path = Path { path in
-                        path.addLines(polygon.map { $0.applying(transform) })
-                        path.closeSubpath()
-                    }
-                    var band = context
-                    band.opacity = 0.55
-                    band.clip(to: path)
-                    band.concatenate(transform)
-                    band.draw(texture, in: source)
                 }
+            } else {
+                context.fill(backPath, with: .color(Color.chineseRoomFold))
             }
-            if !paintedBack { context.fill(backPath, with: .color(Color.chineseRoomFold)) }
             if let creaseTexture, let start = crest.first, let end = crest.last {
                 let dx = end.x - start.x, dy = end.y - start.y
                 let length = hypot(dx, dy)
