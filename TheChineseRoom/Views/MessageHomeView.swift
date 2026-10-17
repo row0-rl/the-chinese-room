@@ -4,13 +4,30 @@ import PencilKit
 
 struct MessageHomeView: View {
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    #if DEBUG
+    @State private var previewHasLoaded = false
+    #endif
     @State private var dictationStartTask: Task<Void, Never>?
     let store: MessageStore
     let rooms: RoomStore
     let appStrings: AppStrings
     @State private var inputText = ""
     @State private var showsKeyboardInput = false
-    @State private var showsSettings = false
+    @State private var showsSettings = {
+        #if DEBUG
+        return ProcessInfo.processInfo.arguments.contains("--settings-preview")
+        #else
+        return false
+        #endif
+    }()
+    @State private var showsSavedMessages = {
+        #if DEBUG
+        return ProcessInfo.processInfo.arguments.contains("--saved-messages-preview") || ProcessInfo.processInfo.arguments.contains("--saved-messages-empty-preview")
+        #else
+        return false
+        #endif
+    }()
     @State private var cardDragOffset: CGFloat = 0
     @State private var isPaging = false
     @State private var cardDragHaptics = CardDragHaptics()
@@ -41,10 +58,18 @@ struct MessageHomeView: View {
             }
 
             if showsKeyboardInput { keyboardDismissLayer }
-            settingsButton
+            savedMessagesButton
         }
         .foregroundStyle(Color.chineseRoomInk)
         .onAppear { cardDragHaptics.prepare() }
+        #if DEBUG
+        .task {
+            if ProcessInfo.processInfo.arguments.contains("--loading-transition-preview") {
+                do { try await Task.sleep(for: .seconds(4)) } catch { return }
+                previewHasLoaded = true
+            }
+        }
+        #endif
         .onChange(of: scenePhase) { _, phase in
             if phase != .active { cardDragHaptics.stopRumble() }
             if phase == .background { cancelHeldDictation() }
@@ -56,7 +81,7 @@ struct MessageHomeView: View {
         .onChange(of: isDraggingCard) { _, dragging in
             if !dragging && !isPaging { cardDragHaptics.stopRumble() }
         }
-        .onChange(of: showsKeyboardInput || showsSettings) { _, presented in
+        .onChange(of: showsKeyboardInput || showsSettings || showsSavedMessages) { _, presented in
             if presented { cardDragHaptics.stopRumble() }
         }
         .onChange(of: store.generationError) { _, error in
@@ -82,30 +107,50 @@ struct MessageHomeView: View {
         .sheet(isPresented: $showsSettings) {
             SettingsView(store: store, rooms: rooms)
         }
+        .toolbar(.hidden, for: .navigationBar)
+        .navigationDestination(isPresented: $showsSavedMessages) {
+            SavedMessagesView(store: store, rooms: rooms, strings: appStrings)
+        }
     }
 
-    private var settingsButton: some View {
+    private var savedMessagesButton: some View {
         HStack {
-            Spacer()
             Button {
                 cancelHeldDictation()
                 dismissKeyboardMode()
-                showsSettings = true
+                showsSavedMessages = true
             } label: {
-                Image(systemName: "gearshape.fill")
+                Image(systemName: "square.stack.fill")
                     .font(.body.weight(.semibold))
                     .frame(width: 40, height: 40)
-                    .background(Color.chineseRoomControl(0.42))
-                    .foregroundStyle(Color.chineseRoomInk)
-                    .clipShape(Circle())
+                    .background(Color.chineseRoomControl(0.42), in: Circle())
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(appStrings.settingsTitle)
-            .accessibilityIdentifier("settings")
+            .accessibilityLabel(appStrings.savedMessagesTitle)
+            .accessibilityIdentifier("saved-messages")
+            Spacer()
         }
         .padding(.horizontal, 20)
         .safeAreaPadding(.top, 8)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+    }
+
+    private var settingsButton: some View {
+        Button {
+            cancelHeldDictation()
+            dismissKeyboardMode()
+            showsSettings = true
+        } label: {
+            Image(systemName: "gearshape.fill")
+                .font(.body.weight(.semibold))
+                .frame(width: 48, height: 48)
+                .background(Color.chineseRoomControl(0.58))
+                .foregroundStyle(Color.chineseRoomInk)
+                .clipShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(appStrings.settingsTitle)
+        .accessibilityIdentifier("settings")
     }
 
     private func cardViewportHeight(in availableHeight: CGFloat) -> CGFloat {
@@ -131,6 +176,7 @@ struct MessageHomeView: View {
                     let offset = restingOffset + (destinationOffset - restingOffset) * progress
                     MessagePaper(seed: card.id, maximumHeight: maximumCardHeight(in: viewportHeight), resetScroll: card.position != 0,
                                  isSaved: card.message?.isSaved ?? false,
+                                 usesContinuousOutline: true,
                                  appStrings: appStrings,
                                  onToggleSaved: card.message != nil ? {
                                      if let message = card.message { store.toggleSaved(for: message.id) }
@@ -149,7 +195,7 @@ struct MessageHomeView: View {
                                     .transition(.opacity)
                             }
                         }
-                        .animation(.easeOut(duration: 0.2), value: card.message != nil)
+                        .animation(MessagePaperTransition.animation(reduceMotion: reduceMotion), value: card.message != nil)
                     }
                     .frame(width: proxy.size.width)
                     .fixedSize(horizontal: false, vertical: true)
@@ -274,6 +320,12 @@ struct MessageHomeView: View {
     }
 
     private var visibleCards: [PresentedMessageCard] {
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("--loading-transition-preview") {
+            return [PresentedMessageCard(id: store.currentMessage.id, position: 0,
+                message: previewHasLoaded ? store.currentMessage : nil)]
+        }
+        #endif
         let isDictation = store.pendingDictationText != nil
         let isPending = isDictation || store.isShowingBlankCard
         return (-2...2).compactMap { position in
@@ -422,6 +474,7 @@ struct MessageHomeView: View {
 
     private var typedInputBar: some View {
         HStack(spacing: 10) {
+            settingsButton
             TextField(appStrings.inputPlaceholder, text: $inputText, axis: .vertical)
                 .appFont(.body)
                 .textFieldStyle(.plain)
@@ -449,6 +502,7 @@ struct MessageHomeView: View {
     private var inputBar: some View {
         HStack(spacing: 12) {
             Spacer(minLength: 0)
+            settingsButton
 
             DictationPressButton(
                 label: appStrings.holdToSpeakLabel,
@@ -696,71 +750,71 @@ private struct SettingsView: View {
                         RoomsManagementView(rooms: rooms, store: store)
                     } label: {
                         Label(appStrings.roomsTitle, systemImage: "rectangle.stack")
-                            .appFont(.body)
+                            .font(.body)
                     }
                     if let room = rooms.currentRoom {
                         RoomLabel(room: room, strings: appStrings)
                     }
                 } header: {
-                    Text(appStrings.currentRoomTitle).appFont(.footnote)
+                    Text(appStrings.currentRoomTitle).font(.footnote)
                 }
 
                 Section {
                     LabeledContent {
                         Text(appStrings.notationName(.fixedSystem(for: target)))
-                            .appFont(.body)
+                            .font(.body)
                     } label: {
-                        Text(appStrings.notationSystemTitle).appFont(.body)
+                        Text(appStrings.notationSystemTitle).font(.body)
                     }
                 } header: {
                     Text("\(appStrings.languageName(target)) · \(appStrings.pronunciationTitle)")
-                        .appFont(.footnote)
+                        .font(.footnote)
                 } footer: {
                     Text(PronunciationNotationSystem.fixedSystem(for: target) == .pinyin
                         ? appStrings.pinyinFooter : appStrings.pronunciationFooter)
-                        .appFont(.footnote)
+                        .font(.footnote)
                 }
 
                 Section {
                     if voices.isEmpty {
                         Text(appStrings.speechUnavailableTitle)
-                            .appFont(.body)
+                            .font(.body)
                     } else {
                         Picker(appStrings.voiceTitle, selection: Binding(
                             get: { selectedVoiceIdentifier },
                             set: { selectVoice($0) }
                         )) {
-                            Text(appStrings.systemDefaultTitle).appFont(.body).tag(String?.none)
+                            Text(appStrings.systemDefaultTitle).font(.body).tag(String?.none)
                             ForEach(voices) { voice in
                                 Text("\(voice.name) · \(voice.qualityDescription)")
-                                    .appFont(.body)
+                                    .font(.body)
                                     .tag(Optional(voice.id))
                             }
                         }
                         .pickerStyle(.navigationLink)
-                        .appFont(.body)
+                        .font(.body)
                     }
                 } header: {
                     Text("\(appStrings.languageName(target)) · \(appStrings.voiceTitle)")
-                        .appFont(.footnote)
+                        .font(.footnote)
                 } footer: {
                     Text(appStrings.voiceFooter)
-                        .appFont(.footnote)
+                        .font(.footnote)
                     if isPreparingVoicePreview { ProgressView() }
                     if let voicePreviewError {
-                        Text(voicePreviewError).appFont(.footnote).foregroundStyle(.red)
+                        Text(voicePreviewError).font(.footnote).foregroundStyle(.red)
                     }
                 }
 
                 Section {
                     Picker(appStrings.appearanceTitle, selection: $appearance) {
                         ForEach(AppAppearance.allCases) { option in
-                            Text(appStrings.appearanceName(option)).appFont(.body).tag(option)
+                            Text(appStrings.appearanceName(option)).font(.body).tag(option)
                         }
                     }
                     .pickerStyle(.segmented)
                 } header: {
-                    Text(appStrings.appearanceTitle).appFont(.footnote)
+                    Text(appStrings.appearanceTitle).font(.footnote)
                 }
             }
             .navigationTitle(appStrings.settingsTitle)
@@ -781,7 +835,7 @@ private struct SettingsView: View {
                     Button(appStrings.cancelButtonTitle) {
                         dismiss()
                     }
-                    .appFont(.body)
+                    .font(.body)
                 }
 
                 ToolbarItem(placement: .confirmationAction) {
@@ -789,7 +843,7 @@ private struct SettingsView: View {
                         store.updateVoiceIdentifier(selectedVoiceIdentifier, for: roomMode)
                         dismiss()
                     }
-                    .appFont(.body)
+                    .font(.body)
                 }
             }
         }

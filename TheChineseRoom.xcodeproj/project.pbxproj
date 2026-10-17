@@ -13,6 +13,8 @@
         F92000000000000000000002 = {isa = XCSwiftPackageProductDependency; package = F92000000000000000000003; productName = FluidAudio; };
 /* End XCSwiftPackageProductDependency section */
 /* Begin PBXBuildFile section */
+        A12000000000000000000003 /* SavedMessageCollection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A12000000000000000000004; };
+        A12000000000000000000001 /* SavedMessagesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A12000000000000000000002; };
 		F10000000000000000000001 /* PaperCornerInteraction.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000002 /* PaperCornerInteraction.swift */; };
         F99000000000000000000001 /* LanguageVariations.swift in Sources */ = {isa = PBXBuildFile; fileRef = F99000000000000000000002 /* LanguageVariations.swift */; };
         F98000000000000000000005 /* RoomViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = F98000000000000000000006 /* RoomViews.swift */; };
@@ -64,6 +66,8 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+        A12000000000000000000004 /* SavedMessageCollection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedMessageCollection.swift; sourceTree = "<group>"; };
+        A12000000000000000000002 /* SavedMessagesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedMessagesView.swift; sourceTree = "<group>"; };
 		F10000000000000000000002 /* PaperCornerInteraction.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaperCornerInteraction.swift; sourceTree = "<group>"; };
         F99000000000000000000002 /* LanguageVariations.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LanguageVariations.swift; sourceTree = "<group>"; };
         F98000000000000000000006 /* RoomViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomViews.swift; sourceTree = "<group>"; };
@@ -176,6 +180,7 @@
 			children = (
                 F99000000000000000000002 /* LanguageVariations.swift */,
                 F98000000000000000000002 /* RoomRecord.swift */,
+                A12000000000000000000004 /* SavedMessageCollection.swift */,
 				C00000000000000000000003 /* LearningMessage.swift */,
 				C00000000000000000000015 /* MessageSessionRecord.swift */,
 			);
@@ -241,6 +246,7 @@
 			isa = PBXGroup;
 			children = (
                 F98000000000000000000006 /* RoomViews.swift */,
+                A12000000000000000000002 /* SavedMessagesView.swift */,
 				C0000000000000000000000E /* MessageHomeView.swift */,
 				C0000000000000000000000F /* MessageCard.swift */,
 				C00000000000000000000016 /* PencilRectangle.swift */,
@@ -363,8 +369,10 @@
 			files = (
                 F99000000000000000000001 /* LanguageVariations.swift in Sources */,
                 F98000000000000000000005 /* RoomViews.swift in Sources */,
+                A12000000000000000000001 /* SavedMessagesView.swift in Sources */,
                 F98000000000000000000003 /* RoomStore.swift in Sources */,
                 F98000000000000000000001 /* RoomRecord.swift in Sources */,
+                A12000000000000000000003 /* SavedMessageCollection.swift in Sources */,
 				D00000000000000000000002 /* AppConfiguration.swift in Sources */,
 				D00000000000000000000003 /* LearningMessage.swift in Sources */,
                 F81000000000000000000001,

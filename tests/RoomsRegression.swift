@@ -1,4 +1,5 @@
 import Foundation
+import CoreGraphics
 import SwiftData
 
 // Replace device-only adapters while exercising the actual stores and SwiftData schema.
@@ -31,6 +32,106 @@ struct AppleMessageRuntime {
         let first = MockMessageService.openingMessage(for: french)
         let second = LearningMessage(sourceText: "hello", normalizedSourceText: "hello",
             targetText: "bonjour", literalMeaning: "hello")
+
+        // Each saved collection receives only its Room's live history.
+        var savedFirst = first; savedFirst.isSaved = true
+        var savedSecond = second; savedSecond.isSaved = true
+        let collection = SavedMessageCollection.items(modeID: french.id,
+            messages: [first, savedSecond], roomTitle: "French")
+        precondition(collection.count == 1 && collection[0].message.id == second.id)
+        precondition(collection.allSatisfy { $0.modeID == french.id })
+        let otherRoom = SavedMessageCollection.items(modeID: reverse.id,
+            messages: [savedFirst], roomTitle: "Reverse")
+        precondition(otherRoom.count == 1 && otherRoom[0].modeID == reverse.id)
+        precondition(collection[0].id != otherRoom[0].id)
+        let emptyRoom = SavedMessageCollection.items(modeID: japanese.id, messages: [first], roomTitle: "Japanese")
+        precondition(emptyRoom.isEmpty, "Other Rooms' saves must not appear in an empty current Room")
+        let afterUnsave = SavedMessageCollection.items(modeID: french.id, messages: [first, second], roomTitle: "French")
+        precondition(afterUnsave.isEmpty)
+        let newestFirst = SavedMessageCollection.items(modeID: french.id,
+            messages: [savedFirst, savedSecond], roomTitle: "French")
+        precondition(newestFirst.map { $0.message.id } == [second.id, first.id])
+        print("PASS: saved collections are isolated per Room, follow live save state, and retain history order")
+
+        let compactStack = SavedMessageStackLayout(count: 4, expandedIndex: nil, expandedHeight: 0)
+        precondition(compactStack.height == 320 && compactStack.offset(at: 2) == 96)
+        precondition(compactStack.index(at: 10) == nil && compactStack.index(at: -1) == nil)
+        precondition(compactStack.index(at: 61) == 0 && compactStack.index(at: 62) == 1)
+        let middlePeek = SavedMessageStackLayout(count: 4, expandedIndex: 1, expandedHeight: 340)
+        precondition(middlePeek.offset(at: 1) == 48, "Expansion must keep the selected card's top in place")
+        precondition(middlePeek.offset(at: 2) == 374 && middlePeek.height == 598)
+        precondition(middlePeek.index(at: 370) == 1 && middlePeek.index(at: 388) == 2,
+            "Scrubbing must hit the visible card after the lower stack moves")
+        let lastPeek = SavedMessageStackLayout(count: 4, expandedIndex: 3, expandedHeight: 600)
+        precondition(lastPeek.offset(at: 3) == 144 && lastPeek.height == 744)
+        precondition(lastPeek.index(at: 743) == 3 && lastPeek.index(at: 744) == nil)
+        let shortPeek = SavedMessageStackLayout(count: 1, expandedIndex: 0, expandedHeight: 20)
+        precondition(shortPeek.height == 176)
+        precondition(SavedMessageStackLayout(count: 0, expandedIndex: nil, expandedHeight: 0).height == 0)
+        let fixedHeights: [CGFloat] = [260, 340, 210, 280]
+        let intact = SavedMessageStackLayout(count: 4, expandedIndex: nil, expandedHeight: 0,
+            cardHeights: fixedHeights)
+        let reveal = SavedMessageStackLayout(count: 4, expandedIndex: 1, expandedHeight: 340,
+            cardHeights: fixedHeights, anchorOffset: intact.offset(at: 1))
+        let switchAnchor = reveal.offset(at: 2)
+        let switched = SavedMessageStackLayout(count: 4, expandedIndex: 2, expandedHeight: 210,
+            cardHeights: fixedHeights, anchorOffset: switchAnchor)
+        for index in 0..<4 {
+            precondition(intact.height(at: index) == reveal.height(at: index))
+            precondition(reveal.height(at: index) == switched.height(at: index),
+                "Covered and revealed cards must keep the same full paper size")
+        }
+        precondition(reveal.offset(at: 1) == intact.offset(at: 1))
+        precondition(switched.offset(at: 2) == switchAnchor,
+            "Scrubbing must preserve the newly selected sheet's current position")
+        precondition(switched.index(at: switchAnchor + 30) == 2)
+        precondition(switched.topOffset > 0 && switched.index(at: switched.topOffset - 1) == nil)
+        precondition(switched.offset(at: 3) > reveal.offset(at: 3))
+        for viewport in [CGRect(x: 0, y: 0, width: 360, height: 700),
+                         CGRect(x: 0, y: 550, width: 360, height: 700)] {
+            for index in 0..<4 {
+                let fingerY = viewport.minY + viewport.height * 0.65
+                let downAnchor = intact.selectionAnchor(at: index, verticalDelta: 15, fingerY: fingerY)
+                let aligned = SavedMessageStackLayout(count: 4, expandedIndex: index,
+                    expandedHeight: fixedHeights[index], cardHeights: fixedHeights, anchorOffset: downAnchor)
+                precondition(abs(aligned.offset(at: index) + aligned.height(at: index)
+                    - fingerY - SavedMessageStackLayout.fingerBottomInset) < 0.001)
+                precondition(aligned.index(at: fingerY + 1) == index,
+                    "Small continued downward movement must remain inside the popped sheet")
+                precondition(aligned.height(at: index) == intact.height(at: index))
+                precondition(intact.selectionAnchor(at: index, verticalDelta: -15, fingerY: fingerY) == intact.offset(at: index))
+                precondition(intact.selectionAnchor(at: index, verticalDelta: 0, fingerY: fingerY) == intact.offset(at: index))
+                // After a downward selection, an upward reversal must preserve
+                // the next card's actual position instead of moving its bottom edge to the finger.
+                let next = min(3, index + 1)
+                precondition(aligned.selectionAnchor(at: next, verticalDelta: -2, fingerY: fingerY) == aligned.offset(at: next))
+            }
+        }
+        // After positioning a revealed sheet against the finger, activation
+        // must follow the next sheet's visible top edge, not another 48 points
+        // of travel from the preceding activation.
+        let fingerAtPop: CGFloat = 400
+        let placed = SavedMessageStackLayout(count: 4, expandedIndex: 1, expandedHeight: 340,
+            cardHeights: fixedHeights,
+            anchorOffset: intact.selectionAnchor(at: 1, verticalDelta: 1, fingerY: fingerAtPop))
+        let nextVisibleEdge = placed.offset(at: 2) + SavedMessageStackLayout.topInset
+        precondition(nextVisibleEdge == fingerAtPop + SavedMessageStackLayout.fingerBottomInset)
+        precondition(placed.index(at: fingerAtPop + 1) == 1)
+        precondition(placed.index(at: nextVisibleEdge - 0.25) == 1)
+        precondition(placed.index(at: nextVisibleEdge + 0.25) == 2,
+            "Entering the next visible sheet must activate it immediately, even after subpoint travel")
+        let followingEdge = placed.offset(at: 3) + SavedMessageStackLayout.topInset
+        precondition(placed.index(at: followingEdge - 0.25) == 2)
+        precondition(placed.index(at: followingEdge + 0.25) == 3)
+        let animatingEdges: [CGFloat] = [26, 74, 415, 463]
+        precondition(placed.index(at: 410, visibleEdges: animatingEdges) == 1,
+            "A target layout boundary must not activate a sheet before its visible edge arrives")
+        precondition(placed.index(at: 415.25, visibleEdges: animatingEdges) == 2)
+        precondition(placed.index(at: 463.25, visibleEdges: animatingEdges) == 3)
+        print("PASS: visible card-boundary activation after repositioning, without a travel threshold")
+        print("PASS: inset finger alignment prevents cascading selection; upward reversal, fixed paper size, and scrolled coordinates")
+        print("PASS: immutable paper heights and anchored selection while neighboring sheets move")
+        print("PASS: one-card expansion, lower-stack displacement, visible-card scrub targeting, and collapse geometry")
 
         // Open a real legacy store using the old, single-entity schema first.
         try seedLegacyStore(url: url, mode: french, messages: [first, second])

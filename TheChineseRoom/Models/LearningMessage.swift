@@ -388,6 +388,9 @@ struct AppStrings: Equatable {
         return sourceBundle.localizedString(forKey: key, value: fallback, table: "Interface")
     }
 
+    var savedMessagesTitle: String { text("savedMessagesTitle") }
+    var savedMessagesEmpty: String { text("savedMessagesEmpty") }
+    var savedMessageOpenHint: String { text("savedMessageOpenHint") }
     var saveExpression: String { text("saveExpression") }
     var unsaveExpression: String { text("unsaveExpression") }
     var expressionSaved: String { text("expressionSaved") }

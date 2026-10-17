@@ -38,6 +38,36 @@ enum PaperCornerInteraction {
                                  tx: start.x - a * sourceStart, ty: start.y - b * sourceStart)
     }
 
+    /// Keep the pencil silhouette within a fraction of a point while removing
+    /// redundant samples along the flat edges. Curved projection subdivides
+    /// retained edges separately, only where the paper is actually bending.
+    static func simplifiedOutline(_ points: [CGPoint], tolerance: CGFloat = 0.12) -> [CGPoint] {
+        guard points.count > 2 else { return points }
+        var kept = Set([0, points.count - 1])
+        var ranges = [(0, points.count - 1)]
+        while let (start, end) = ranges.popLast() {
+            guard end > start + 1 else { continue }
+            let a = points[start], b = points[end]
+            let dx = b.x - a.x, dy = b.y - a.y
+            let lengthSquared = dx * dx + dy * dy
+            var largest = tolerance * tolerance
+            var split: Int?
+            for index in (start + 1)..<end {
+                let p = points[index]
+                let t = lengthSquared > 0 ? min(1, max(0, ((p.x - a.x) * dx + (p.y - a.y) * dy) / lengthSquared)) : 0
+                let ex = p.x - a.x - t * dx, ey = p.y - a.y - t * dy
+                let distance = ex * ex + ey * ey
+                if distance > largest { largest = distance; split = index }
+            }
+            if let split {
+                kept.insert(split)
+                ranges.append((start, split))
+                ranges.append((split, end))
+            }
+        }
+        return kept.sorted().map { points[$0] }
+    }
+
     static func startsInCorner(_ location: CGPoint, paperFrame: CGRect) -> Bool {
         CGRect(x: paperFrame.maxX - hitSize, y: paperFrame.minY,
                width: hitSize, height: min(hitSize, paperFrame.height)).contains(location)

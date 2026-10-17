@@ -70,6 +70,118 @@ struct PencilRectangle: View {
     }
 }
 
+/// Each top edge rounds down into the stack's single shared side outline.
+struct PencilStackDivider: View {
+    let seed: UUID
+    let stackHeight: CGFloat
+    let rowOffset: CGFloat
+    @Environment(\.displayScale) private var displayScale
+    @State private var image: UIImage?
+
+    fileprivate static func contour(seed: UUID, width: CGFloat, stackHeight: CGFloat,
+                                    rowOffset: CGFloat) -> [PencilBorderPoint] {
+        let outline = PencilRectangleShape(seed: PencilRectangle.placeholderSeed)
+            .path(in: CGRect(x: 0, y: 0, width: width, height: stackHeight))
+        var vertices: [CGPoint] = []
+        outline.cgPath.applyWithBlock { element in
+            if element.pointee.type == .moveToPoint || element.pointee.type == .addLineToPoint {
+                vertices.append(element.pointee.points[0])
+            }
+        }
+        let top: CGFloat = 14
+        let radius: CGFloat = 15
+        let joinY = rowOffset + top + radius
+        // Find the actual shared outline at this row, rather than giving each
+        // sheet a separately seeded side that would drift away from the stack.
+        var intersections: [CGFloat] = []
+        for index in vertices.indices {
+            let a = vertices[index], b = vertices[(index + 1) % vertices.count]
+            if min(a.y, b.y) <= joinY, max(a.y, b.y) >= joinY, abs(b.y - a.y) > 0.001 {
+                intersections.append(a.x + (b.x - a.x) * (joinY - a.y) / (b.y - a.y))
+            }
+        }
+        let left = intersections.min() ?? 14
+        let right = intersections.max() ?? (width - 14)
+        var points: [PencilBorderPoint] = []
+        func curve(_ a: CGPoint, _ b: CGPoint, _ c: CGPoint, _ d: CGPoint) {
+            for step in 0...20 {
+                let t = CGFloat(step) / 20, u = 1 - t
+                points.append(PencilBorderPoint(
+                    x: u*u*u*a.x + 3*u*u*t*b.x + 3*u*t*t*c.x + t*t*t*d.x,
+                    y: u*u*u*a.y + 3*u*u*t*b.y + 3*u*t*t*c.y + t*t*t*d.y))
+            }
+        }
+        let handle = radius * 0.5523
+        curve(CGPoint(x: left, y: top + radius),
+              CGPoint(x: left, y: top + radius - handle),
+              CGPoint(x: left + radius - handle, y: top),
+              CGPoint(x: left + radius, y: top))
+        let span = max(1, right - left - radius * 2)
+        let phase = CGFloat(seed.uuidString.utf8.reduce(0) { ($0 + Int($1)) % 101 }) / 101 * .pi * 2
+        for step in 1..<max(2, Int(span / 2)) {
+            let t = CGFloat(step) / CGFloat(max(2, Int(span / 2)))
+            let envelope = pow(sin(.pi * t), 2)
+            points.append(PencilBorderPoint(x: left + radius + span * t,
+                y: top + envelope * (sin(t * 11 + phase) + 0.35 * sin(t * 27 + phase))))
+        }
+        curve(CGPoint(x: right - radius, y: top),
+              CGPoint(x: right - radius + handle, y: top),
+              CGPoint(x: right, y: top + radius - handle),
+              CGPoint(x: right, y: top + radius))
+        return points
+    }
+
+    var body: some View {
+        GeometryReader { geometry in
+            let request = PencilBorderRequest(seed: seed, size: geometry.size, scale: displayScale,
+                cornerRadius: 0, lineWidth: 3.3, wobble: 0,
+                foldContours: [Self.contour(seed: seed, width: geometry.size.width,
+                    stackHeight: stackHeight, rowOffset: rowOffset)], isFold: true)
+            ZStack {
+                if let image {
+                    Image(uiImage: image)
+                        .renderingMode(.template)
+                        .resizable()
+                        .foregroundStyle(Color.chineseRoomInk)
+                }
+            }
+            .frame(width: geometry.size.width, height: geometry.size.height)
+            .task(id: request) {
+                guard let rendered = await PencilBorderRenderer.shared.image(for: request),
+                      !Task.isCancelled else { return }
+                image = rendered
+            }
+        }
+        .opacity(0.55)
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+}
+
+/// The covering sheet begins at its drawn edge, not the transparent space
+/// above it. Use the divider's exact contour so exposed text remains visible.
+struct PencilStackSheetShape: Shape {
+    let seed: UUID
+    let stackHeight: CGFloat
+    let rowOffset: CGFloat
+    let isFirst: Bool
+
+    func path(in rect: CGRect) -> Path {
+        guard !isFirst else { return Path(rect) }
+        let points = PencilStackDivider.contour(seed: seed, width: rect.width,
+            stackHeight: stackHeight, rowOffset: rowOffset)
+        guard let first = points.first, let last = points.last else { return Path(rect) }
+        var path = Path()
+        path.move(to: CGPoint(x: 0, y: first.y))
+        for point in points { path.addLine(to: CGPoint(x: point.x, y: point.y)) }
+        path.addLine(to: CGPoint(x: rect.width, y: last.y))
+        path.addLine(to: CGPoint(x: rect.width, y: rect.height))
+        path.addLine(to: CGPoint(x: 0, y: rect.height))
+        path.closeSubpath()
+        return path
+    }
+}
+
 /// The pencil texture is rendered once in paper coordinates. All deformation
 /// happens synchronously in Canvas using the same pose as the paper fill.
 struct PencilCurledSheetOutline: View {
@@ -96,9 +208,21 @@ struct PencilCurledSheetOutline: View {
         var result: [Ribbon] = []
         var previous = first
         var offset: CGFloat = 0
-        // Short ribbons approximate the projected contour while keeping the
-        // graphite's perpendicular dimension independent of foreshortening.
-        let sampled = stride(from: 3, to: vertices.count, by: 3).map { vertices[$0] } + [first]
+        // Long ribbons suffice on flat edges. Only the bent region needs
+        // short ribbons to preserve projection and constant graphite width.
+        let simplified = PaperCornerInteraction.simplifiedOutline(vertices + [first])
+        let isFlat = hypot(cylinder.normal.dx, cylinder.normal.dy) < 0.1
+        var sampled: [CGPoint] = []
+        for (a, b) in zip(simplified, simplified.dropFirst()) {
+            let lower = min(cylinder.distance(a), cylinder.distance(b))
+            let upper = max(cylinder.distance(a), cylinder.distance(b))
+            let bends = !isFlat && upper > 0 && lower < .pi * cylinder.radius
+            let steps = bends ? max(1, Int(ceil(hypot(b.x - a.x, b.y - a.y) / 3))) : 1
+            for step in 1...steps {
+                let t = CGFloat(step) / CGFloat(steps)
+                sampled.append(CGPoint(x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t))
+            }
+        }
         for point in sampled {
             let length = hypot(point.x - previous.x, point.y - previous.y)
             if length > 0.00001 {
@@ -123,10 +247,16 @@ struct PencilCurledSheetOutline: View {
     var body: some View {
         let ribbons = ribbons
         let perimeter = ((ribbons.last.map { $0.offset + $0.length } ?? 1) * 64).rounded() / 64
+        // Height animation must not launch a fresh PencilKit rasterization on
+        // every frame. A reusable strip keeps its grain and request identity.
+        // Stretch along the perimeter only; the graphite's 16-point cross
+        // section stays unchanged. Bound raster size even on large screens.
+        let textureLength: CGFloat = 1024
         let source = CGRect(x: -8, y: -8, width: perimeter + 16, height: 16)
-        let sheetRequest = PencilBorderRequest(seed: seed, size: source.size, scale: displayScale,
+        let sheetRequest = PencilBorderRequest(seed: seed,
+            size: CGSize(width: textureLength + 16, height: 16), scale: displayScale,
             cornerRadius: 0, lineWidth: 3.3, wobble: 0,
-            foldContours: [[PencilBorderPoint(x: 8, y: 8), PencilBorderPoint(x: perimeter + 8, y: 8)]], isFold: true)
+            foldContours: [[PencilBorderPoint(x: 8, y: 8), PencilBorderPoint(x: textureLength + 8, y: 8)]], isFold: true)
         let creaseRequest = PencilBorderRequest(seed: seed, size: CGSize(width: 272, height: 16), scale: displayScale,
             cornerRadius: 0, lineWidth: 0.8, wobble: 0,
             foldContours: [[PencilBorderPoint(x: 8, y: 8), PencilBorderPoint(x: 264, y: 8)]], isFold: true)
@@ -142,23 +272,25 @@ struct PencilCurledSheetOutline: View {
                 var texture = context.resolve(Image(uiImage: sheetTexture))
                 texture.shading = .color(Color.chineseRoomInk)
                 let threshold = .pi * cylinder.radius / 2
+                let isFlat = hypot(cylinder.normal.dx, cylinder.normal.dy) < 0.1
                 let contour = Path { path in
-                    path.addLines(vertices.map { cylinder.project($0).point })
+                    path.addLines(isFlat ? vertices : vertices.map { cylinder.project($0).point })
                     path.closeSubpath()
                 }.strokedPath(StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round))
-                for back in [false, true] {
+                for back in isFlat ? [false] : [false, true] {
                     if back { context.fill(backPath, with: .color(Color.chineseRoomFold)) }
+                    // Clip the full contour once per face, not once per ribbon.
+                    var faceInk = context
+                    faceInk.opacity = 0.55
+                    faceInk.clip(to: contour)
                     for ribbon in ribbons {
                         let q = (cylinder.distance(ribbon.start) + cylinder.distance(ribbon.end)) / 2
-                        guard (q >= threshold) == back,
+                        guard isFlat || (q >= threshold) == back,
                               let transform = PaperCornerInteraction.ribbonTransform(
-                                start: cylinder.project(ribbon.start).point, end: cylinder.project(ribbon.end).point,
+                                start: isFlat ? ribbon.start : cylinder.project(ribbon.start).point,
+                                end: isFlat ? ribbon.end : cylinder.project(ribbon.end).point,
                                 sourceStart: ribbon.offset, sourceLength: ribbon.length) else { continue }
-                        var ink = context
-                        ink.opacity = 0.55
-                        // Keep ribbon joins inside one rounded outline, rather
-                        // than allowing rotated texture fringes to fan outward.
-                        ink.clip(to: contour)
+                        var ink = faceInk
                         ink.concatenate(transform)
                         ink.clip(to: Path(CGRect(x: ribbon.offset - 0.03, y: -8,
                                                 width: ribbon.length + 0.06, height: 16)))

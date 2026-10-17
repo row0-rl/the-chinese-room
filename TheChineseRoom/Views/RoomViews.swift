@@ -6,9 +6,9 @@ struct RoomLabel: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text(room.title(strings: strings)).appFont(.body).lineLimit(room.customName == nil ? 3 : 2)
+            Text(room.title(strings: strings)).font(.body).lineLimit(room.customName == nil ? 3 : 2)
             if room.customName != nil {
-                Text(room.pairLabel(strings: strings)).appFont(.caption).opacity(0.7).lineLimit(3)
+                Text(room.pairLabel(strings: strings)).font(.caption).opacity(0.7).lineLimit(3)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -53,14 +53,14 @@ struct RoomCreationView: View {
         NavigationStack {
             Form {
                 Section {
-                    Text(strings.roomCreationSubtitle).appFont(.body)
+                    Text(strings.roomCreationSubtitle).font(.body)
                 }
                 .listRowBackground(Color.chineseRoomCard)
                 Section {
                     languagePicker(strings.roomTargetTitle, selection: $target, excluding: source)
                     formPicker(selection: $target, excluding: source)
                 } footer: {
-                    Text(strings.originFormFooter).appFont(.footnote)
+                    Text(strings.originFormFooter).font(.footnote)
                 }
                 .listRowBackground(Color.chineseRoomCard)
                 Section {
@@ -68,9 +68,9 @@ struct RoomCreationView: View {
                     formPicker(selection: $source, excluding: target)
                 } footer: {
                     if !mode.hasDistinctLanguages {
-                        Text(strings.roomDifferentLanguages).appFont(.footnote)
+                        Text(strings.roomDifferentLanguages).font(.footnote)
                     } else if existingRoom != nil {
-                        Text(strings.roomAlreadyExists).appFont(.footnote)
+                        Text(strings.roomAlreadyExists).font(.footnote)
                     }
                 }
                 .listRowBackground(Color.chineseRoomCard)
@@ -79,7 +79,7 @@ struct RoomCreationView: View {
                         guard rooms.add(mode) != nil else { return }
                         if !isFirstRoom { dismiss() }
                     }
-                    .appFont(.headline)
+                    .font(.headline)
                     .disabled(!mode.hasDistinctLanguages)
                     .accessibilityIdentifier("create-room")
                 }
@@ -99,14 +99,14 @@ struct RoomCreationView: View {
                             }
                         }
                     } header: {
-                        Text(strings.archivedRoomsTitle).appFont(.footnote)
+                        Text(strings.archivedRoomsTitle).font(.footnote)
                     } footer: {
-                        Text(strings.archivedRoomsFooter).appFont(.footnote)
+                        Text(strings.archivedRoomsFooter).font(.footnote)
                     }
                     .listRowBackground(Color.chineseRoomCard)
                 }
                 if let error = rooms.persistenceError {
-                    Section { Text(error).appFont(.footnote).foregroundStyle(.red) }
+                    Section { Text(error).font(.footnote).foregroundStyle(.red) }
                     .listRowBackground(Color.chineseRoomCard)
                 }
             }
@@ -120,7 +120,7 @@ struct RoomCreationView: View {
             .toolbar {
                 if !isFirstRoom {
                     ToolbarItem(placement: .cancellationAction) {
-                        Button(strings.cancelButtonTitle) { dismiss() }.appFont(.body)
+                        Button(strings.cancelButtonTitle) { dismiss() }.font(.body)
                     }
                 }
             }
@@ -141,19 +141,19 @@ struct RoomCreationView: View {
                 let name = strings.languageGroupName(language)
                 let nativeName = language == .chinese ? "中文" : language.defaultProfile.nativeName
                 Text(name == nativeName ? name : "\(name) · \(nativeName)")
-                    .appFont(.body).tag(language)
+                    .font(.body).tag(language)
             }
         }
-        .appFont(.body)
+        .font(.body)
     }
 
     private func formPicker(selection: Binding<LanguageProfile>, excluding other: LanguageProfile) -> some View {
         Picker(strings.originFormTitle, selection: selection) {
             ForEach(selection.wrappedValue.learningLanguage.forms(excluding: other)) { form in
-                Text(strings.originFormName(form)).appFont(.body).tag(form)
+                Text(strings.originFormName(form)).font(.body).tag(form)
             }
         }
-        .appFont(.body)
+        .font(.body)
         .accessibilityIdentifier(selection.wrappedValue.id == target.id ? "target-origin-form" : "source-origin-form")
     }
 }
@@ -185,9 +185,9 @@ struct RoomsManagementView: View {
                     }
                 }
                 Button(strings.addRoomTitle, systemImage: "plus") { showsAddRoom = true }
-                    .appFont(.body).disabled(!canSwitch)
+                    .font(.body).disabled(!canSwitch)
             } footer: {
-                Text(strings.roomsOrderingFooter).appFont(.footnote)
+                Text(strings.roomsOrderingFooter).font(.footnote)
             }
             .listRowBackground(Color.chineseRoomCard)
             if !rooms.archivedRooms.isEmpty {
@@ -203,14 +203,14 @@ struct RoomsManagementView: View {
                         .disabled(!canSwitch)
                     }
                 } header: {
-                    Text(strings.archivedRoomsTitle).appFont(.footnote)
+                    Text(strings.archivedRoomsTitle).font(.footnote)
                 } footer: {
-                    Text(strings.archivedRoomsFooter).appFont(.footnote)
+                    Text(strings.archivedRoomsFooter).font(.footnote)
                 }
                 .listRowBackground(Color.chineseRoomCard)
             }
             if let error = rooms.persistenceError {
-                Section { Text(error).appFont(.footnote).foregroundStyle(.red) }
+                Section { Text(error).font(.footnote).foregroundStyle(.red) }
                 .listRowBackground(Color.chineseRoomCard)
             }
         }
@@ -247,11 +247,11 @@ private struct RoomRenameView: View {
         NavigationStack {
             Form {
                 Section {
-                    TextField(strings.roomNameTitle, text: $name).appFont(.body)
+                    TextField(strings.roomNameTitle, text: $name).font(.body)
                         .accessibilityIdentifier("room-name")
-                    Text(room.pairLabel(strings: strings)).appFont(.footnote)
+                    Text(room.pairLabel(strings: strings)).font(.footnote)
                 } footer: {
-                    Text(strings.roomNameFooter).appFont(.footnote)
+                    Text(strings.roomNameFooter).font(.footnote)
                 }
                 .listRowBackground(Color.chineseRoomCard)
             }
@@ -263,13 +263,13 @@ private struct RoomRenameView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button(strings.cancelButtonTitle) { dismiss() }.appFont(.body)
+                    Button(strings.cancelButtonTitle) { dismiss() }.font(.body)
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button(strings.doneButtonTitle) {
                         rooms.rename(room, to: name)
                         dismiss()
-                    }.appFont(.body)
+                    }.font(.body)
                 }
             }
         }

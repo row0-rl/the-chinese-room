@@ -32,7 +32,10 @@ struct AppView: View {
             } else if rooms.currentRoom == nil {
                 RoomCreationView(rooms: rooms, initialMode: store.currentLanguageMode, isFirstRoom: true)
             } else {
-                MessageHomeView(store: store, rooms: rooms, appStrings: appLocale.strings)
+                NavigationStack {
+                    MessageHomeView(store: store, rooms: rooms, appStrings: appLocale.strings)
+                }
+                .tint(Color.chineseRoomInk)
             }
         }
         .appFont(.body)

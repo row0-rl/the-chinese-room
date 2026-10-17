@@ -59,12 +59,7 @@ enum AppFont {
         return CTFontCreateWithFontDescriptor(descriptor, CTFontGetSize(font), nil)
     }
 
-    static func configureNavigationTitles() {
-        let standard = withEastAsianFallback(CTFontCreateWithName(name as CFString, 17, nil)) as UIFont
-        let large = withEastAsianFallback(CTFontCreateWithName(name as CFString, 34, nil)) as UIFont
-        UINavigationBar.appearance().titleTextAttributes = [.font: standard]
-        UINavigationBar.appearance().largeTitleTextAttributes = [.font: large]
-    }
+
 }
 
 private struct AppFontModifier: ViewModifier {

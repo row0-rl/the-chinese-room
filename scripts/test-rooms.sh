@@ -6,7 +6,7 @@ trap 'rm -rf "$TEST_DIR"' EXIT
 cd "$ROOT_DIR"
 xcrun swiftc -target "$(uname -m)-apple-macos26.0" \
   tests/Support/AppAppearanceStub.swift \
-  TheChineseRoom/Models/{LearningMessage,MessageSessionRecord,RoomRecord,LanguageVariations}.swift \
+  TheChineseRoom/Models/{LearningMessage,MessageSessionRecord,RoomRecord,LanguageVariations,SavedMessageCollection}.swift \
   TheChineseRoom/App/AppConfiguration.swift \
   TheChineseRoom/Services/Messages/{MessageService,MockMessageService,AppleTranslationService}.swift \
   TheChineseRoom/Services/Speech/SpeechService.swift \

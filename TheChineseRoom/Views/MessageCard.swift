@@ -334,6 +334,8 @@ struct MessagePaper<Content: View>: View {
     let maximumHeight: CGFloat
     var resetScroll = false
     var isSaved = false
+    // Loading and loaded feed cards share the renderer and its cached texture.
+    var usesContinuousOutline = false
     let appStrings: AppStrings
     var onToggleSaved: (() -> Void)? = nil
     @ViewBuilder let content: () -> Content
@@ -342,6 +344,8 @@ struct MessagePaper<Content: View>: View {
     @GestureState private var cornerDragTranslation: CGSize?
     @State private var feedbackID: UUID?
     @State private var feedback: String?
+
+    private var drawsCurledOutline: Bool { usesContinuousOutline || onToggleSaved != nil || isSaved }
 
     private var cornerDragProgress: CGFloat? {
         if cornerDragTranslation != nil || curlTranslation != .zero {
@@ -380,15 +384,15 @@ struct MessagePaper<Content: View>: View {
             .background(Color.chineseRoomSurface, in: PencilRectangleShape(seed: seed))
             .clipShape(PencilRectangleShape(seed: seed))
             .mask {
-                PaperCylinderCutout(seed: seed, displacement: onToggleSaved != nil || isSaved ? curlDisplacement : .zero, includeFront: true)
+                PaperCylinderCutout(seed: seed, displacement: drawsCurledOutline ? curlDisplacement : .zero, includeFront: true)
             }
             .overlay {
-                if onToggleSaved == nil && !isSaved {
+                if !drawsCurledOutline {
                     PencilRectangle(seed: seed)
                 }
             }
             .overlay(alignment: .topTrailing) {
-                if onToggleSaved != nil || isSaved {
+                if drawsCurledOutline {
                     PaperCylinderSurface(seed: seed, displacement: curlDisplacement)
                         .allowsHitTesting(false)
                         .accessibilityHidden(true)
@@ -467,7 +471,7 @@ private struct CylinderPaperGeometry {
         // Sample the original edges before projection so curved silhouettes
         // stay smooth without rendering the surface as separate painted strips.
         var sampled: [CGPoint] = []
-        if let last = points.last {
+        if hypot(displacement.width, displacement.height) > 0.1, let last = points.last {
             for (a, b) in zip([last] + points, points) {
                 let count = max(1, Int(ceil(hypot(b.x - a.x, b.y - a.y))))
                 for i in 0..<count {
@@ -476,7 +480,7 @@ private struct CylinderPaperGeometry {
                 }
             }
         }
-        vertices = sampled
+        vertices = hypot(displacement.width, displacement.height) <= 0.1 ? points : sampled
         let normal = CGVector(dx: -displacement.width, dy: -displacement.height)
         let tip = points.max { $0.x * normal.dx + $0.y * normal.dy < $1.x * normal.dx + $1.y * normal.dy } ?? CGPoint(x: size.width, y: 0)
         cylinder = PaperCylinder(corner: tip, displacement: displacement)
@@ -525,29 +529,52 @@ private struct PaperCylinderCutout: Shape {
     }
 }
 
-private struct PaperCylinderSurface: View, Animatable {
+private struct PaperCylinderSurface: View {
     let seed: UUID
     var displacement: CGSize
-    var animatableData: AnimatablePair<CGFloat, CGFloat> {
-        get { AnimatablePair(displacement.width, displacement.height) }
-        set { displacement = CGSize(width: newValue.first, height: newValue.second) }
-    }
+
     var body: some View {
         GeometryReader { proxy in
-            let paper = CylinderPaperGeometry(seed: seed, size: proxy.size, displacement: displacement)
-            let cylinder = paper.cylinder
-            let lifted = cylinder.clip(paper.vertices, at: 0, above: true)
-            let isFlat = hypot(displacement.width, displacement.height) <= 0.1
-            let back = isFlat ? [] : cylinder.clip(lifted, at: .pi * cylinder.radius / 2, above: true)
-            let backFace = back.map { cylinder.project($0).point }
-            let drawingBounds = cylinder.drawingBounds(vertices: paper.vertices, paperSize: proxy.size)
-            PencilCurledSheetOutline(seed: seed, paperSize: proxy.size, vertices: paper.vertices,
-                                    cylinder: cylinder, crest: isFlat ? [] : paper.crest, backFace: backFace,
-                                    drawingBounds: drawingBounds)
-                .frame(width: drawingBounds.width, height: drawingBounds.height)
-                .offset(x: drawingBounds.minX, y: drawingBounds.minY)
-
+            PaperCylinderSurfaceDrawing(seed: seed, paperSize: proxy.size, displacement: displacement)
         }
+    }
+}
+
+/// GeometryReader supplies the destination size during a layout animation.
+/// Interpolate that size explicitly so Canvas draws the same intermediate
+/// paper bounds as the background and mask, rather than jumping ahead of them.
+private struct PaperCylinderSurfaceDrawing: View, Animatable {
+    let seed: UUID
+    var paperSize: CGSize
+    var displacement: CGSize
+    var animatableData: AnimatablePair<AnimatablePair<CGFloat, CGFloat>, AnimatablePair<CGFloat, CGFloat>> {
+        get { AnimatablePair(AnimatablePair(paperSize.width, paperSize.height),
+                             AnimatablePair(displacement.width, displacement.height)) }
+        set {
+            paperSize = CGSize(width: newValue.first.first, height: newValue.first.second)
+            displacement = CGSize(width: newValue.second.first, height: newValue.second.second)
+        }
+    }
+
+    var body: some View {
+        let paper = CylinderPaperGeometry(seed: seed, size: paperSize, displacement: displacement)
+        let cylinder = paper.cylinder
+        let lifted = cylinder.clip(paper.vertices, at: 0, above: true)
+        let isFlat = hypot(displacement.width, displacement.height) <= 0.1
+        let back = isFlat ? [] : cylinder.clip(lifted, at: .pi * cylinder.radius / 2, above: true)
+        let backFace = back.map { cylinder.project($0).point }
+        let drawingBounds = cylinder.drawingBounds(vertices: paper.vertices, paperSize: paperSize)
+        PencilCurledSheetOutline(seed: seed, paperSize: paperSize, vertices: paper.vertices,
+                                cylinder: cylinder, crest: isFlat ? [] : paper.crest, backFace: backFace,
+                                drawingBounds: drawingBounds)
+            .frame(width: drawingBounds.width, height: drawingBounds.height)
+            .offset(x: drawingBounds.minX, y: drawingBounds.minY)
+    }
+}
+
+enum MessagePaperTransition {
+    static func animation(reduceMotion: Bool) -> Animation {
+        reduceMotion ? .easeOut(duration: 0.12) : .smooth(duration: 0.3)
     }
 }
 
@@ -572,7 +599,7 @@ struct CappedCardScroll<Content: View>: View {
                         } else {
                             // The paper extends below its local top; the centered parent
                             // smoothly lifts it by half the added height at the same time.
-                            withAnimation(.smooth(duration: 0.45)) { contentHeight = height }
+                            withAnimation(MessagePaperTransition.animation(reduceMotion: reduceMotion)) { contentHeight = height }
                         }
                     }
             }

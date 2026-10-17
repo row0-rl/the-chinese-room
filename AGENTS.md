@@ -43,7 +43,8 @@ for each pair. Legacy form IDs remain unchanged. The pickers exclude the opposit
 spoken language; two regional forms of the same language cannot form a Room.
 Mandarin and Cantonese have distinct spoken-language identities.
 Long-press a Room to pin, rename, or archive it. Archived Rooms can be restored
-from the same settings screen. The main screen has only the Settings gear.
+from the same settings screen. The Settings gear sits to the left of Hold to speak in the bottom input row;
+it remains at the left of the typing bar in keyboard mode.
 Pinned Rooms come first; other Rooms use a snapshot of recent use at launch and
 stay in place during a session. Custom names always retain the language-pair label.
 Room metadata and per-pair message sessions are stored separately in SwiftData.
@@ -85,8 +86,37 @@ front of the bend and are clipped at the projected silhouette, not the bend's
 starting axis; their positions are not yet warped across the curved surface.
 VoiceOver exposes a save/unsave action. The first-use hint disappears after saving. Reduce Motion uses a short
 transition. Save state is stored with the message in its Room history; legacy
-messages default to unsaved. Saved collections and feed resurfacing are not yet
-implemented.
+messages default to unsaved. The top-left stack button navigates to a full Saved Messages page for the current Room only;
+messages from different Rooms are never mixed. Saved cards have flat corners and
+contain both the original and translated text. They overlap vertically at a compact 48-point stride, exposing
+one original-text line while the next card naturally covers the translation;
+the last card's translation remains visible. The stack shares one continuous pencil outline
+on each side; each card’s top edge keeps rounded corners that curve into that shared outline without overlapping side strokes.
+Each covering sheet is clipped to the same top contour as its divider, so the
+transparent area above the pencil edge cannot hide the preceding line's descenders.
+Every saved sheet keeps its full original text, translation, literal meaning,
+and available examples laid out at a fixed natural height, even while covered.
+Hold a saved card for 0.3 seconds to uncover it by moving neighboring sheets;
+the selected sheet retains its size and text layout while neighboring sheets move.
+While holding, slide across the stack to uncover the card under the finger with
+selection haptics. During downward finger movement, the selected intact sheet's
+bottom edge sits 28 points below the finger in scroll-content coordinates when it
+becomes selected. It then stays at that position until another card pops; further
+finger movement over the same selected card does not reposition it. Scrub activation
+uses measured card top-edge positions, including during repositioning animations, with no
+additional finger-travel threshold. An unchanged pointer does not trigger another
+selection merely because the stack moved.
+Upward movement and the initial hold reveal the selection in
+place. Direction uses the latest movement, so new upward selections stay in place. There is no viewport centering.
+The earlier upward lift is removed. Only one card is
+uncovered; releasing or cancelling the gesture restores the compact overlap. Scrolling pauses only after the hold is recognized. Tapping still
+opens the full expression and an unsave action. The collection reads the current Room's live save flags; unsaving updates that
+Room's history. Switching Rooms resets any open saved-expression detail. Feed resurfacing is not yet implemented.
+
+Loading and loaded feed cards retain the same pencil renderer and reusable texture strip.
+Their content fade and height change share a 0.3-second animation (shortened for
+Reduce Motion); the Canvas outline explicitly interpolates the same paper size. Flat outline samples are simplified within 0.12 points; only bent
+regions use short projection ribbons, with one silhouette clip per paper face.
 
 ### Random Messages
 
@@ -131,6 +161,10 @@ the message. Model availability is required; successful output does not establis
 linguistic accuracy or official locale support. IPA accuracy remains experimental.
 
 ## Design
+
+Settings and all Room management forms use system fonts, including native
+navigation titles, pickers, toolbars, footers, and rename/add-room sheets. The
+message feed retains the custom handwritten fonts.
 
 Main background color is light beige. Text is black.
 

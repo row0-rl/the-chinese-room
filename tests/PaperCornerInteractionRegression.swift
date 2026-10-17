@@ -99,6 +99,27 @@ import Foundation
             precondition(!PaperCornerInteraction.shouldToggle(isSaved: false, translation: direction))
             precondition(PaperCornerInteraction.shouldToggle(isSaved: true, translation: direction))
         }
+        // Dense straight edges collapse to their endpoints without changing
+        // corners or closure. Wavy edges must retain their subpixel shape.
+        let denseRectangle = (0...350).map { CGPoint(x: CGFloat($0), y: 0) }
+            + (1...180).map { CGPoint(x: 350, y: CGFloat($0)) }
+            + (0..<350).reversed().map { CGPoint(x: CGFloat($0), y: 180) }
+            + (0..<180).reversed().map { CGPoint(x: 0, y: CGFloat($0)) }
+        let compactRectangle = PaperCornerInteraction.simplifiedOutline(denseRectangle)
+        precondition(compactRectangle.count == 5 && compactRectangle.first == compactRectangle.last)
+        let wavy = (0...1000).map { CGPoint(x: CGFloat($0), y: sin(CGFloat($0) / 29) * 2) }
+        let compact = PaperCornerInteraction.simplifiedOutline(wavy)
+        precondition(compact.count < wavy.count / 10, "Flat outline drawing should remove redundant ribbons")
+        for point in wavy {
+            let error = zip(compact, compact.dropFirst()).map { a, b -> CGFloat in
+                let dx = b.x - a.x, dy = b.y - a.y
+                let t = min(1, max(0, ((point.x - a.x) * dx + (point.y - a.y) * dy) / (dx * dx + dy * dy)))
+                return hypot(point.x - a.x - t * dx, point.y - a.y - t * dy)
+            }.min()!
+            precondition(error <= 0.120001, "Simplifying the outline must preserve its pencil wiggle")
+        }
+        precondition(PaperCornerInteraction.simplifiedOutline([]).isEmpty)
+        print("PASS: redundant outline samples reduced from \(wavy.count) to \(compact.count) within 0.12 points")
         let frame = CGRect(x: 20, y: 150, width: 360, height: 250)
         precondition(PaperCornerInteraction.startsInCorner(CGPoint(x: 365, y: 160), paperFrame: frame))
         precondition(!PaperCornerInteraction.startsInCorner(CGPoint(x: 200, y: 160), paperFrame: frame))

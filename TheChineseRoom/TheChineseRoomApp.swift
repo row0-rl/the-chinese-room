@@ -7,7 +7,6 @@ struct TheChineseRoomApp: App {
 
     init() {
         AppAppearance.consumeLaunchOverride()
-        AppFont.configureNavigationTitles()
     }
 
     var body: some Scene {
